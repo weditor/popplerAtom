@@ -3,6 +3,7 @@
 //
 
 #include <cmath>
+#include <iostream>
 #include <goo/PNGWriter.h>
 #include "AtomOutputDev.h"
 #include "GfxState.h"
@@ -121,10 +122,19 @@ void AtomString::endString()
 
 AtomPage::AtomPage() {
 //todo: init all members;
+    m_fontSize = 0;		// current font size
+    m_curStr = nullptr;		// currently active string
+
+    m_yxStrings = nullptr;	// strings in y-major order
+    m_yxTail = nullptr;	// tail cursor for m_yxStrings list
+
+    m_fonts = new HtmlFontAccu();
+    m_pageWidth = 0;
+    m_pageHeight = 0;
 }
 
 AtomPage::~AtomPage() {
-
+    delete m_fonts;
 }
 
 void AtomPage::clear() {
@@ -195,7 +205,7 @@ void AtomPage::endString() {
     m_curStr->endString();
 
     // insert string in y-major list
-    m_yxTail = m_curStr;
+//    m_yxTail = m_curStr;
     if (m_yxTail)
         m_yxTail->yxNext = m_curStr;
     else
@@ -236,8 +246,9 @@ void AtomPage::conv() {
         //  printf("%d\n",pos);
         h=m_fonts->Get(pos);
 
-        if (tmp->htext) delete tmp->htext;
+        delete tmp->htext;
         tmp->htext=HtmlFont::simple(h,tmp->text,tmp->len);
+        std::cout<<"text:"<<tmp->htext->getCString()<<std::endl;
     }
 }
 
@@ -253,8 +264,8 @@ void AtomPage::dump(int pageNum) {
 /// AtomOutputDev
 ///////////////////////////
 AtomOutputDev::AtomOutputDev() {
-    m_docPage = nullptr;
     m_pages = new AtomPage();
+    m_ok = gTrue;
 }
 
 AtomOutputDev::~AtomOutputDev() {
@@ -275,17 +286,6 @@ void AtomOutputDev::endPage() {
     m_pages->conv();
     m_pages->coalesce();
     m_pages->dump(m_pageNum);
-
-    // I don't yet know what to do in the case when there are pages of different
-    // sizes and we want complex output: running ghostscript many times
-    // seems very inefficient. So for now I'll just use last page's size
-    // todo: delete these width and height?
-    m_maxPageWidth = m_pages->m_pageWidth;
-    m_maxPageHeight = m_pages->m_pageHeight;
-
-    //if(!noframes&&!xml) fputs("<br/>\n", fContentsFrame);
-    // todo: add some print
-//    if(!stout && !globalParams->getErrQuiet()) printf("Page-%d\n",(pageNum));
 }
 
 void AtomOutputDev::updateFont(GfxState *state) {

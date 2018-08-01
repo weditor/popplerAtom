@@ -83,24 +83,6 @@ public:
     // Coalesce strings that look like parts of the same line.
     void coalesce();
 
-//    // Find a string.  If <top> is true, starts looking at top of page;
-//    // otherwise starts looking at <xMin>,<yMin>.  If <bottom> is true,
-//    // stops looking at bottom of page; otherwise stops looking at
-//    // <xMax>,<yMax>.  If found, sets the text bounding rectange and
-//    // returns true; otherwise returns false.
-//
-//
-//    // new functions
-//    void AddLink(const HtmlLink& x){
-//        links->AddLink(x);
-//    }
-//
-//    // add an image to the current page
-//    void addImage(GooString *fname, GfxState *state);
-//
-//    // number of images on the current page
-//    int  getNumImages() { return imgList->getLength(); }
-
     void dump(int pageNum);
 
     // Clear the page.
@@ -108,32 +90,15 @@ public:
 
     void conv();
 private:
-//    HtmlFont* getFont(AtomString *hStr) { return fonts->Get(hStr->fontpos); }
-
     double m_fontSize;		// current font size
-//    GBool rawOrder;		// keep strings in content stream order
-//
     AtomString *m_curStr;		// currently active string
-//
+
     AtomString *m_yxStrings;	// strings in y-major order
     AtomString *m_yxTail;	// tail cursor for m_yxStrings list
-//
-//    void setDocName(char* fname);
-//    void dumpAsXML(FILE* f,int page);
-//    void dumpComplex(FILE* f, int page);
-//    int dumpComplexHeaders(FILE * const file, FILE *& pageFile, int page);
-//
-//    // marks the position of the fonts that belong to current page (for noframes)
-//    int fontsPageMarker;
+
     HtmlFontAccu *m_fonts;
-//    HtmlLinks *links;
-//    GooList   *imgList;
-//
-//    GooString *DocName;
-//    GooString *imgExt;
     int m_pageWidth;
     int m_pageHeight;
-//    int firstPage;                // used to begin the numeration of pages
 
     friend class AtomOutputDev;
 };
@@ -182,7 +147,6 @@ public:
                          GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL,
                          void *annotDisplayDecideCbkData = NULL) override
     {
-        m_docPage = page;
         return gTrue;
     }
 
@@ -212,9 +176,6 @@ public:
                    int width, int height, GfxImageColorMap *colorMap,
                    GBool interpolate, int *maskColors, GBool inlineImg) override;
 
-    int getPageWidth() { return m_maxPageWidth; }
-    int getPageHeight() { return m_maxPageHeight; }
-
 private:
     void drawJpegImage(GfxState *state, Stream *str);
     void drawPngImage(GfxState *state, Stream *str, int width, int height, GfxImageColorMap *colorMap,
@@ -223,14 +184,6 @@ private:
     // is ok? if AtomOutputDev Construct failed, it's false.
     GBool m_ok;
 
-    // page width
-    int m_maxPageWidth;
-    // page height
-    int m_maxPageHeight;
-
-    // todo: these info seems useness
-    // current page in pdf
-    Page *m_docPage;
     // current page number
     int m_pageNum;
 

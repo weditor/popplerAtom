@@ -14,10 +14,11 @@ if [ $1 == pack ]; then
 elif [ $1 == unpack ]; then
     echo start unpack ... ;
     if [ ! -d poppler-0.66.0 ]; then
-        echo "directory 'poppler-0.66.0' already exits! remove it first."
-        exit 4;
+        echo "WARNING: directory 'poppler-0.66.0' already exits!";
+    else
+        unzip poppler-0.66.0.zip
     fi
-    unzip poppler-0.66.0.zip
+    cp -t poppler-0.66.0/utils/ PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h
     echo "finish!"
     exit 0;
 else

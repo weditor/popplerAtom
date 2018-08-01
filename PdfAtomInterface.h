@@ -15,9 +15,14 @@ class PDFDoc;
 
 #define DFLT_SOLUTION 72
 
+
+extern void initGlobalParams();
+extern void destroyGlobalParams();
+
+
 class PdfAtomInterface {
 public:
-    PdfAtomInterface(const char *pdfName, const char* ownerPW=nullptr, const char * userPW=nullptr);
+    explicit PdfAtomInterface(const char *pdfName, const char* ownerPW=nullptr, const char * userPW=nullptr);
     ~PdfAtomInterface();
 
     // todo: GlobalParams移动到外外面, 是否保持静默. 不打印错误.

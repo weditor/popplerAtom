@@ -12,8 +12,24 @@
 GBool fontFullName = gFalse;
 GBool xml = gFalse;
 
+extern GlobalParams *globalParams;
+
+void initGlobalParams(){
+    if(!globalParams) {
+        globalParams = new GlobalParams();
+    }
+}
+
+void destroyGlobalParams() {
+    if (globalParams) {
+        delete globalParams;
+        globalParams = nullptr;
+    }
+}
+
 PdfAtomInterface::PdfAtomInterface(const char *pdfName, const char* ownerPW, const char * userPW) {
-    globalParams = new GlobalParams();
+//    globalParams = new GlobalParams();
+//    globalParams.
     m_pdfName = new GooString(pdfName);
 
     // todo: 应该在打开pdf之后立即删除用户名密码??
@@ -78,14 +94,3 @@ void PdfAtomInterface::renderHtml(unsigned int pageNum, float scale) {
     }
 }
 
-//int main(int argc, char **argv) {
-//    if (argc != 2) {
-//        std::cout<<"usage: "<<argv[0]<<" pdf_path "<<std::endl;
-//        return 1;
-//    }
-//    char * pdf_path = argv[1];
-//    std::cout<<"pdf path is: "<<pdf_path<<std::endl;
-//    auto pdf = PdfAtomInterface(pdf_path);
-//    std::cout<<"number pages:" <<pdf.getNumPages()<<std::endl;
-//    return 0;
-//}
