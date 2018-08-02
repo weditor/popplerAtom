@@ -12,6 +12,39 @@
 class Page;
 class HtmlFontAccu;
 
+struct AtomPoint
+{
+    AtomPoint(double x, double y):x(x), y(y){}
+    double x;
+    double y;
+};
+
+class AtomLine
+{
+public:
+    AtomLine(int type, AtomPoint p0, AtomPoint p1,  AtomPoint c=AtomPoint(-1, -1))
+    :m_type(type), m_p0(p0), m_p1(p1), m_c(c) { }
+
+    int m_type;
+    AtomPoint m_p0;
+    AtomPoint m_p1;
+    AtomPoint m_c;
+};
+
+class AtomImage
+{
+public:
+    AtomImage(GfxState *state) {
+        state->transform(0, 0, &xMin, &yMax);
+        state->transform(1, 1, &xMax, &yMin);
+    }
+    ~AtomImage() { }
+    AtomImage(const AtomImage &) = delete;
+    AtomImage& operator=(const AtomImage &) = delete;
+
+    double xMin, xMax;		// image x coordinates
+    double yMin, yMax;		// image y coordinates
+};
 
 class AtomString {
 public:
@@ -89,6 +122,8 @@ public:
     void clear();
 
     void conv();
+    void addImage(AtomImage* img);
+    void addLine(AtomLine* line);
 private:
     double m_fontSize;		// current font size
     AtomString *m_curStr;		// currently active string
@@ -97,6 +132,8 @@ private:
     AtomString *m_yxTail;	// tail cursor for m_yxStrings list
 
     HtmlFontAccu *m_fonts;
+    GooList *m_imgList;
+    GooList *m_lineList;
     int m_pageWidth;
     int m_pageHeight;
 
@@ -115,7 +152,7 @@ public:
     AtomOutputDev();
 
     // Destructor.
-    virtual ~AtomOutputDev();
+    ~AtomOutputDev() override;
 
     // Check if file was successfully created.
     virtual GBool isOk() { return m_ok; }
@@ -175,8 +212,14 @@ public:
     void drawImage(GfxState *state, Object *ref, Stream *str,
                    int width, int height, GfxImageColorMap *colorMap,
                    GBool interpolate, int *maskColors, GBool inlineImg) override;
+    void stroke(GfxState *state) override;
+    void fill(GfxState *state) override;
+    void eoFill(GfxState *state) override;
+    void clip(GfxState *state) override;
+    void eoClip(GfxState *state) override;
 
 private:
+    void convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type);
     void drawJpegImage(GfxState *state, Stream *str);
     void drawPngImage(GfxState *state, Stream *str, int width, int height, GfxImageColorMap *colorMap,
             GBool isMask=gFalse);

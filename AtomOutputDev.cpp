@@ -15,6 +15,7 @@
 #endif
 
 
+
 ///////////////////////////////////
 /// AtomString
 ///////////////////////////////////
@@ -131,10 +132,15 @@ AtomPage::AtomPage() {
     m_fonts = new HtmlFontAccu();
     m_pageWidth = 0;
     m_pageHeight = 0;
+    m_imgList = new GooList();
+    m_lineList = new GooList();
 }
 
 AtomPage::~AtomPage() {
+    this->clear();
     delete m_fonts;
+    delete m_imgList;
+    delete m_lineList;
 }
 
 void AtomPage::clear() {
@@ -150,6 +156,18 @@ void AtomPage::clear() {
     }
     m_yxStrings = nullptr;
     m_yxTail = nullptr;
+
+    while (m_imgList->getLength()) {
+        int last_idx = m_imgList->getLength()-1;
+        delete((AtomImage*)m_imgList->get(last_idx));
+        m_imgList->del(last_idx);
+    }
+
+    while (m_lineList->getLength()) {
+        int last_idx = m_lineList->getLength()-1;
+        delete((AtomLine*)m_lineList->get(last_idx));
+        m_lineList->del(last_idx);
+    }
 }
 
 void AtomPage::updateFont(GfxState *state) {
@@ -248,8 +266,17 @@ void AtomPage::conv() {
 
         delete tmp->htext;
         tmp->htext=HtmlFont::simple(h,tmp->text,tmp->len);
-        std::cout<<"text:"<<tmp->htext->getCString()<<std::endl;
+//        std::cout<<"text:"<<tmp->htext->getCString()<<std::endl;
     }
+}
+
+void AtomPage::addImage(AtomImage *img) {
+    m_imgList->append((void *)img);
+}
+
+void AtomPage::addLine(AtomLine *line) {
+    std::cout<<"line:("<<line->m_type<<") "<<line->m_p0.x<<", "<<line->m_p0.y<<", "<<line->m_p1.x<<", "<<line->m_p1.y<<std::endl;
+    m_lineList->append((void *)line);
 }
 
 void AtomPage::coalesce() {
@@ -314,40 +341,43 @@ void AtomOutputDev::drawChar(GfxState *state, double x, double y,
     m_pages->addChar(state, x, y, dx, dy, originX, originY, u, uLen);
 }
 
-
-
 void AtomOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
                                   int width, int height, GBool invert,
                                   GBool interpolate, GBool inlineImg) {
-    // dump JPEG file
-    if (str->getKind() == strDCT) {
-        drawJpegImage(state, str);
-    }
-    else {
-#ifdef ENABLE_LIBPNG
-        drawPngImage(state, str, width, height, nullptr, gTrue);
-#else
-        OutputDev::drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
-#endif
-    }
+    m_pages->addImage(new AtomImage(state));
+    OutputDev::drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
+//    // dump JPEG file
+//    if (str->getKind() == strDCT) {
+//        drawJpegImage(state, str);
+//    }
+//    else {
+//#ifdef ENABLE_LIBPNG
+//        drawPngImage(state, str, width, height, nullptr, gTrue);
+//#else
+//        OutputDev::drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
+//#endif
+//    }
 }
 
 void AtomOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
                               int width, int height, GfxImageColorMap *colorMap,
                               GBool interpolate, int *maskColors, GBool inlineImg) {
-    // dump JPEG file
-    if (str->getKind() == strDCT && (colorMap->getNumPixelComps() == 1 ||
-                                                 colorMap->getNumPixelComps() == 3) && !inlineImg) {
-        drawJpegImage(state, str);
-    }
-    else {
-#ifdef ENABLE_LIBPNG
-        drawPngImage(state, str, width, height, colorMap);
-#else
-        OutputDev::drawImage(state, ref, str, width, height, colorMap, interpolate,
+    m_pages->addImage(new AtomImage(state));
+    OutputDev::drawImage(state, ref, str, width, height, colorMap, interpolate,
                          maskColors, inlineImg);
-#endif
-    }
+    // dump JPEG file
+//    if (str->getKind() == strDCT && (colorMap->getNumPixelComps() == 1 ||
+//                                                 colorMap->getNumPixelComps() == 3) && !inlineImg) {
+//        drawJpegImage(state, str);
+//    }
+//    else {
+//#ifdef ENABLE_LIBPNG
+//        drawPngImage(state, str, width, height, colorMap);
+//#else
+//        OutputDev::drawImage(state, ref, str, width, height, colorMap, interpolate,
+//                         maskColors, inlineImg);
+//#endif
+//    }
 }
 
 void AtomOutputDev::drawJpegImage(GfxState *state, Stream *str)
@@ -416,8 +446,7 @@ void AtomOutputDev::drawPngImage(GfxState *state, Stream *str, int width, int he
         png_bytep *row_pointer= &row;
 
         // Initialize the image stream
-        auto *imgStr = new ImageStream(str, width,
-                                              colorMap->getNumPixelComps(), colorMap->getBits());
+        auto *imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(), colorMap->getBits());
         imgStr->reset();
 
         // For each line...
@@ -506,3 +535,70 @@ void AtomOutputDev::drawPngImage(GfxState *state, Stream *str, int width, int he
 //    pages->addImage(fName, state);
 #endif
 }
+
+
+void AtomOutputDev::stroke(GfxState *state) {
+    if (state->getStrokeColorSpace()->isNonMarking()) {
+        return;
+    }
+    convertPath(state, state->getPath(), gFalse, 0);
+}
+
+void AtomOutputDev::fill(GfxState *state) {
+    if (state->getFillColorSpace()->isNonMarking()) {
+        return;
+    }
+    convertPath(state, state->getPath(), gTrue, 1);
+}
+
+void AtomOutputDev::eoFill(GfxState *state) {
+    if (state->getFillColorSpace()->isNonMarking()) {
+        return;
+    }
+    convertPath(state, state->getPath(), gTrue, 2);
+}
+
+void AtomOutputDev::clip(GfxState *state) {
+    convertPath(state, state->getPath(), gTrue, 3);
+}
+
+void AtomOutputDev::eoClip(GfxState *state) {
+    convertPath(state, state->getPath(), gTrue, 4);
+}
+
+void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
+    const int n = dropEmptySubpaths ? 1 : 0;
+
+    for (int i = 0; i < path->getNumSubpaths(); ++i) {
+        GfxSubpath *subpath = path->getSubpath(i);
+        if (subpath->getNumPoints() > n) {
+            double lastX=subpath->getX(0), lastY=subpath->getY(0);
+            int j = 1;
+            while (j < subpath->getNumPoints()) {
+                if (subpath->getCurve(j)) {
+                    // 绘制圆弧
+                    m_pages->addLine(new AtomLine(
+                            type,
+                            AtomPoint(subpath->getX(j), subpath->getY(j)),
+                            AtomPoint(subpath->getX(j + 2), subpath->getY(j + 2)),
+                            AtomPoint(subpath->getX(j + 1), subpath->getY(j + 1))
+                    ));
+                    lastX = subpath->getX(j + 2);
+                    lastY = subpath->getY(j + 2);
+                    j += 3;
+                } else {
+                    // 绘制直线.
+                    m_pages->addLine(new AtomLine(
+                            type,
+                            AtomPoint(lastX, lastY),
+                            AtomPoint(subpath->getX(j), subpath->getY(j))
+                    ));
+                    lastX = subpath->getX(j);
+                    lastY = subpath->getY(j);
+                    ++j;
+                }
+            }
+        }
+    }
+}
+
