@@ -9,131 +9,64 @@
 #include "GfxState.h"
 #include "GfxFont.h"
 #include "HtmlUtils.h"
+#include <goo/GooList.h>
+#include "HtmlFonts.h"
 
 #ifdef ENABLE_LIBPNG
 #include <png.h>
+#include <poppler/UnicodeMap.h>
+#include <poppler/GlobalParams.h>
+
 #endif
 
 
+GooString* textFilter(const Unicode* u, int uLen) {
+    GooString *tmp = new GooString();
+    UnicodeMap *uMap;
+    char buf[8];
+    int n;
 
-///////////////////////////////////
-/// AtomString
-///////////////////////////////////
-AtomString::AtomString(GfxState *state, double fontSize, HtmlFontAccu* _fonts) : fonts(_fonts) {
-    GfxFont *font;
-    double x, y;
-
-    state->transform(state->getCurX(), state->getCurY(), &x, &y);
-    if ((font = state->getFont())) {
-        double ascent = font->getAscent();
-        double descent = font->getDescent();
-        if( ascent > 1.05 ){
-            //printf( "ascent=%.15g is too high, descent=%.15g\n", ascent, descent );
-            ascent = 1.05;
-        }
-        if( descent < -0.4 ){
-            //printf( "descent %.15g is too low, ascent=%.15g\n", descent, ascent );
-            descent = -0.4;
-        }
-        yMin = y - ascent * fontSize;
-        yMax = y - descent * fontSize;
-        GfxRGB rgb;
-        state->getFillRGB(&rgb);
-        HtmlFont hfont=HtmlFont(font, static_cast<int>(fontSize-1), rgb);
-        if (isMatRotOrSkew(state->getTextMat())) {
-            double normalizedMatrix[4];
-            memcpy(normalizedMatrix, state->getTextMat(), sizeof(normalizedMatrix));
-            // browser rotates the opposite way
-            // so flip the sign of the angle -> sin() components change sign
-            normalizedMatrix[1] *= -1;
-            normalizedMatrix[2] *= -1;
-            normalizeRotMat(normalizedMatrix);
-            hfont.setRotMat(normalizedMatrix);
-        }
-        fontpos = fonts->AddFont(hfont);
-    } else {
-        // this means that the PDF file draws text without a current font,
-        // which should never happen
-        yMin = y - 0.95 * fontSize;
-        yMax = y + 0.35 * fontSize;
-        fontpos=0;
-    }
-    if (yMin == yMax) {
-        // this is a sanity check for a case that shouldn't happen -- but
-        // if it does happen, we want to avoid dividing by zero later
-        yMin = y;
-        yMax = y + 1;
-    }
-    col = 0;
-    text = nullptr;
-    xRight = nullptr;
-    link = nullptr;
-    len = size = 0;
-    yxNext = nullptr;
-    xyNext = nullptr;
-    htext=new GooString();
-    dir = textDirUnknown;
-}
-
-
-AtomString::~AtomString() {
-    gfree(text);
-    delete htext;
-    gfree(xRight);
-}
-
-void AtomString::addChar(GfxState *state, double x, double y,
-                         double dx, double dy, Unicode u) {
-    if (dir == textDirUnknown) {
-        //dir = UnicodeMap::getDirection(u);
-        dir = textDirLeftRight;
+    // get the output encoding
+    if (!(uMap = globalParams->getTextEncoding())) {
+        return tmp;
     }
 
-    if (len == size) {
-        size += 16;
-        text = (Unicode *)grealloc(text, size * sizeof(Unicode));
-        xRight = (double *)grealloc(xRight, size * sizeof(double));
-    }
-    text[len] = u;
-    if (len == 0) {
-        xMin = x;
-    }
-    xMax = xRight[len] = x + dx;
-//printf("added char: %f %f xright = %f\n", x, dx, x+dx);
-    ++len;
-}
-
-void AtomString::endString()
-{
-    if( dir == textDirRightLeft && len > 1 )
-    {
-        //printf("will reverse!\n");
-        for (int i = 0; i < len / 2; i++)
-        {
-            Unicode ch = text[i];
-            text[i] = text[len - i - 1];
-            text[len - i - 1] = ch;
+    for (int i = 0; i < uLen; ++i) {
+        // skip control characters.  W3C disallows them and they cause a warning
+        // with PHP.
+        if (u[i] <= 31)
+            continue;
+        // convert unicode to string
+        if ((n = uMap->mapUnicode(u[i], buf, sizeof(buf))) > 0) {
+            tmp->append(buf, n);
         }
     }
+
+    uMap->decRefCnt();
+    return tmp;
 }
+
+AtomImage::AtomImage(GfxState *state) {
+    state->transform(0, 0, &xMin, &yMax);
+    state->transform(1, 1, &xMax, &yMin);
+}
+
 
 //////////////////////
 /// AtomPage
 //////////////////////
 
 AtomPage::AtomPage() {
-//todo: init all members;
     m_fontSize = 0;		// current font size
-    m_curStr = nullptr;		// currently active string
-
-    m_yxStrings = nullptr;	// strings in y-major order
-    m_yxTail = nullptr;	// tail cursor for m_yxStrings list
+//    m_curStr = nullptr;		// currently active string
+//
+//    m_yxStrings = nullptr;	// strings in y-major order
+//    m_yxTail = nullptr;	// tail cursor for m_yxStrings list
 
     m_fonts = new HtmlFontAccu();
-    m_pageWidth = 0;
-    m_pageHeight = 0;
     m_imgList = new GooList();
     m_lineList = new GooList();
+    m_lastBoxId = -1;
 }
 
 AtomPage::~AtomPage() {
@@ -144,18 +77,18 @@ AtomPage::~AtomPage() {
 }
 
 void AtomPage::clear() {
-    AtomString *p1, *p2;
+//    AtomString *p1, *p2;
 
-    if (m_curStr) {
-        delete m_curStr;
-        m_curStr = nullptr;
-    }
-    for (p1 = m_yxStrings; p1; p1 = p2) {
-        p2 = p1->yxNext;
-        delete p1;
-    }
-    m_yxStrings = nullptr;
-    m_yxTail = nullptr;
+//    if (m_curStr) {
+//        delete m_curStr;
+//        m_curStr = nullptr;
+//    }
+//    for (p1 = m_yxStrings; p1; p1 = p2) {
+//        p2 = p1->yxNext;
+//        delete p1;
+//    }
+//    m_yxStrings = nullptr;
+//    m_yxTail = nullptr;
 
     while (m_imgList->getLength()) {
         int last_idx = m_imgList->getLength()-1;
@@ -168,6 +101,9 @@ void AtomPage::clear() {
         delete((AtomLine*)m_lineList->get(last_idx));
         m_lineList->del(last_idx);
     }
+    m_pageInfos = PageInfos();
+    m_lastBox = AtomBox();
+    m_pageBox = AtomBox();
 }
 
 void AtomPage::updateFont(GfxState *state) {
@@ -177,6 +113,7 @@ void AtomPage::updateFont(GfxState *state) {
     int code;
     double w;
 
+    // todo: update font here
     // adjust the font size
     m_fontSize = state->getTransformedFontSize();
     if ((font = state->getFont()) && font->getType() == fontType3) {
@@ -208,41 +145,41 @@ void AtomPage::updateFont(GfxState *state) {
 
 void AtomPage::beginString(GfxState *state, const GooString *s) {
     // todo: remember to free it.
-    m_curStr = new AtomString(state, m_fontSize, m_fonts);
+//    m_curStr = new AtomString(state, m_fontSize, m_fonts);
 }
 
 void AtomPage::endString() {
     // throw away zero-length strings -- they don't have valid xMin/xMax
     // values, and they're useless anyway
-    if (m_curStr->len == 0) {
-        delete m_curStr;
-        m_curStr = nullptr;
-        return;
-    }
 
-    m_curStr->endString();
-
-    // insert string in y-major list
+//    if (m_curStr->len == 0) {
+//        delete m_curStr;
+//        m_curStr = nullptr;
+//        return;
+//    }
+//
+//    m_curStr->endString();
+//
+//    // insert string in y-major list
+////    m_yxTail = m_curStr;
+//    if (m_yxTail)
+//        m_yxTail->yxNext = m_curStr;
+//    else
+//        m_yxStrings = m_curStr;
 //    m_yxTail = m_curStr;
-    if (m_yxTail)
-        m_yxTail->yxNext = m_curStr;
-    else
-        m_yxStrings = m_curStr;
-    m_yxTail = m_curStr;
-    m_curStr->yxNext = nullptr;
-    m_curStr = nullptr;
+//    m_curStr->yxNext = nullptr;
+//    m_curStr = nullptr;
 }
 
 void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy, double ox, double oy, Unicode *u,
                        int uLen) {
     double x1, y1, w1, h1, dx2, dy2;
     state->transform(x, y, &x1, &y1);
-    if (m_curStr && m_curStr->len){
-        endString();
-    }
+//    if (m_curStr && m_curStr->len){
+//        endString();
+//    }
     beginString(state, nullptr);
-    state->textTransformDelta(state->getCharSpace() * state->getHorizScaling(),
-                              0, &dx2, &dy2);
+    state->textTransformDelta(state->getCharSpace() * state->getHorizScaling(), 0, &dx2, &dy2);
     dx -= dx2;
     dy -= dy2;
     state->transformDelta(dx, dy, &w1, &h1);
@@ -250,24 +187,60 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
         w1 /= uLen;
         h1 /= uLen;
     }
+    double xMin, yMin, xMax, yMax;
+    state->getClipBBox(&xMin, &yMin, &xMax, &yMax);
+    AtomBox box(xMin, yMin, xMax, yMax);
+
+    if (box != m_lastBox ){
+        if(box != m_pageBox){
+            PdfItem item(-1, CELL, "", xMin, yMin, xMax, yMax);
+            m_lastBoxId = m_pageInfos.addItem(item, -1) - 1;
+        }
+        else {
+            m_lastBoxId = -1;
+        }
+        m_lastBox = box;
+    }
+
+    int fontpos = -1;
+    if(GfxFont *font = state->getFont()) {
+        GfxRGB rgb;
+        state->getFillRGB(&rgb);
+        // todo: 增加render, type.
+        HtmlFont hfont = HtmlFont(font, static_cast<int>(state->getFontSize()), rgb);
+        if (isMatRotOrSkew(state->getTextMat())) {
+            double normalizedMatrix[4];
+            memcpy(normalizedMatrix, state->getTextMat(), sizeof(normalizedMatrix));
+            normalizedMatrix[1] *= -1;
+            normalizedMatrix[2] *= -1;
+            normalizeRotMat(normalizedMatrix);
+            hfont.setRotMat(normalizedMatrix);
+        }
+        fontpos = m_fonts->AddFont(hfont);
+    }
+
     for (int i = 0; i < uLen; ++i) {
-        m_curStr->addChar(state, x1 + i*w1, y1 + i*h1, w1, h1, u[i]);
+        GooString *s = textFilter (u+i, 1);
+        PdfItem item(-1, TEXT, s->getCString(), x1 + i*w1, y1 + i*h1, w1, h1, fontpos);
+        m_pageInfos.addItem(item, m_lastBoxId);
+        delete s;
+//        m_curStr->addtextFilterChar(state, x1 + i*w1, y1 + i*h1, w1, h1, u[i]);
     }
 }
 
 void AtomPage::conv() {
-    AtomString *tmp;
-
-    HtmlFont* h;
-    for(tmp=m_yxStrings;tmp;tmp=tmp->yxNext){
-        int pos=tmp->fontpos;
-        //  printf("%d\n",pos);
-        h=m_fonts->Get(pos);
-
-        delete tmp->htext;
-        tmp->htext=HtmlFont::simple(h,tmp->text,tmp->len);
-//        std::cout<<"text:"<<tmp->htext->getCString()<<std::endl;
-    }
+//    AtomString *tmp;
+//
+//    HtmlFont* h;
+//    for(tmp=m_yxStrings;tmp;tmp=tmp->yxNext){
+//        int pos=tmp->fontpos;
+//        //  printf("%d\n",pos);
+//        h=m_fonts->Get(pos);
+//
+//        delete tmp->htext;
+//        tmp->htext=HtmlFont::simple(h,tmp->text,tmp->len);
+////        std::cout<<"text:"<<tmp->htext->getCString()<<std::endl;
+//    }
 }
 
 void AtomPage::addImage(AtomImage *img) {
@@ -275,16 +248,32 @@ void AtomPage::addImage(AtomImage *img) {
 }
 
 void AtomPage::addLine(AtomLine *line) {
-    std::cout<<"line:("<<line->m_type<<") "<<line->m_p0.x<<", "<<line->m_p0.y<<", "<<line->m_p1.x<<", "<<line->m_p1.y<<std::endl;
+//    std::cout<<"line:("<<line->m_type<<") "<<line->m_p0.x<<", "<<line->m_p0.y<<", "<<line->m_p1.x<<", "<<line->m_p1.y<<std::endl;
     m_lineList->append((void *)line);
+}
+
+
+void AtomPage::setPageBoarder(const double width, const double height){
+    m_pageBox = AtomBox(0, 0, width, height);
 }
 
 void AtomPage::coalesce() {
     // todo: duplicated word
 }
 
-void AtomPage::dump(int pageNum) {
-    // todo: dump
+void AtomPage::dump(unsigned int pageNum, PageInfos &pageInfos) {
+//    AtomString *p1, *p2;
+//    for (p1 = m_yxStrings; p1; p1 = p2) {
+//        p2 = p1->yxNext;
+//        pageInfos.addItem();
+//    }
+//    m_yxStrings = nullptr;
+//    m_yxTail = nullptr;
+//    this->clear();
+    pageInfos = m_pageInfos;
+    pageInfos.m_page_num = pageNum;
+    pageInfos.m_width = int(m_pageBox.x2);
+    pageInfos.m_height = int(m_pageBox.y2);
 }
 
 ///////////////////////////
@@ -303,8 +292,7 @@ void AtomOutputDev::startPage(int pageNum, GfxState *state, XRef *xref) {
 //    OutputDev::startPage(pageNum, state, xref);
     this->m_pageNum = pageNum;
     m_pages->clear();
-    m_pages->m_pageWidth=static_cast<int>(state->getPageWidth());
-    m_pages->m_pageHeight=static_cast<int>(state->getPageHeight());
+    m_pages->setPageBoarder(state->getPageWidth(), state->getPageHeight());
 }
 
 void AtomOutputDev::endPage() {
@@ -312,11 +300,9 @@ void AtomOutputDev::endPage() {
 
     m_pages->conv();
     m_pages->coalesce();
-    m_pages->dump(m_pageNum);
 }
 
 void AtomOutputDev::updateFont(GfxState *state) {
-//    OutputDev::updateFont(state);
     m_pages->updateFont(state);
 }
 
@@ -559,11 +545,17 @@ void AtomOutputDev::eoFill(GfxState *state) {
 }
 
 void AtomOutputDev::clip(GfxState *state) {
-    convertPath(state, state->getPath(), gTrue, 3);
+//    double xmin, ymin, xmax, ymax;
+//    state->getClipBBox(&xmin, &ymin, &xmax, &ymax);
+//    std::cout<<"clip:"<<xmin<<", "<<ymin<<", "<<xmax<<", "<<ymax<<std::endl;
+//    convertPath(state, state->getPath(), gTrue, 3);
 }
 
 void AtomOutputDev::eoClip(GfxState *state) {
-    convertPath(state, state->getPath(), gTrue, 4);
+//    double xmin, ymin, xmax, ymax;
+//    state->getClipBBox(&xmin, &ymin, &xmax, &ymax);
+//    std::cout<<"eoclip:"<<xmin<<", "<<ymin<<", "<<xmax<<", "<<ymax<<std::endl;
+//    convertPath(state, state->getPath(), gTrue, 4);
 }
 
 void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
@@ -600,5 +592,9 @@ void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptyS
             }
         }
     }
+}
+
+void AtomOutputDev::getInfo(unsigned int pageNum, PageInfos &pageInfos) {
+    m_pages->dump(pageNum, pageInfos);
 }
 

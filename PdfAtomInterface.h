@@ -30,7 +30,7 @@ public:
     GBool isOk();
     int getNumPages();
     void getDocInfo();
-    void renderHtml(unsigned int pageNum, float scale=1.0);
+    void renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale=1.0);
 private:
     GlobalParams *globalParams;
     GooString *m_pdfName;

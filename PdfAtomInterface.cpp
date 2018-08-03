@@ -16,7 +16,7 @@ extern GlobalParams *globalParams;
 
 void initGlobalParams(){
     if(!globalParams) {
-        globalParams = new GlobalParams();
+        globalParams = new GlobalParams("/usr/share/poppler");
     }
 }
 
@@ -83,7 +83,7 @@ void PdfAtomInterface::getDocInfo() {
 //    }
 }
 
-void PdfAtomInterface::renderHtml(unsigned int pageNum, float scale) {
+void PdfAtomInterface::renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale) {
     auto *atomOut = new AtomOutputDev();
     if (atomOut->isOk())
     {
@@ -91,6 +91,7 @@ void PdfAtomInterface::renderHtml(unsigned int pageNum, float scale) {
 //                          gTrue, gFalse, gFalse);
         m_doc->displayPage(atomOut, pageNum, DFLT_SOLUTION*scale, DFLT_SOLUTION*scale, 0,
                            gTrue, gFalse, gFalse);
+        atomOut->getInfo(pageNum, pageInfos);
     }
 }
 

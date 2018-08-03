@@ -7,10 +7,18 @@
 
 
 #include <poppler/OutputDev.h>
-#include "HtmlOutputDev.h"
+#include "poppler_atom_types.h"
+
 
 class Page;
 class HtmlFontAccu;
+class GfxPath;
+class GooList;
+class GooString;
+
+
+GooString* textFilter(const Unicode* u, int uLen);
+
 
 struct AtomPoint
 {
@@ -34,11 +42,9 @@ public:
 class AtomImage
 {
 public:
-    AtomImage(GfxState *state) {
-        state->transform(0, 0, &xMin, &yMax);
-        state->transform(1, 1, &xMax, &yMin);
-    }
-    ~AtomImage() { }
+    explicit AtomImage(GfxState *state);
+    ~AtomImage() = default;
+
     AtomImage(const AtomImage &) = delete;
     AtomImage& operator=(const AtomImage &) = delete;
 
@@ -46,46 +52,6 @@ public:
     double yMin, yMax;		// image y coordinates
 };
 
-class AtomString {
-public:
-
-    // Constructor.
-    AtomString(GfxState *state, double fontSize, HtmlFontAccu* fonts);
-
-    // Destructor.
-    ~AtomString();
-
-    AtomString(const AtomString &) = delete;
-    AtomString& operator=(const AtomString &) = delete;
-
-    // Add a character to the string.
-    void addChar(GfxState *state, double x, double y,
-                 double dx, double dy,
-                 Unicode u);
-    HtmlLink* getLink() { return link; }
-    const HtmlFont &getFont() const { return *fonts->Get(fontpos); }
-    void endString(); // postprocessing
-
-private:
-    // aender die text variable
-    HtmlLink *link;
-    double xMin, xMax;		// bounding box x coordinates
-    double yMin, yMax;		// bounding box y coordinates
-    int col;			// starting column
-    Unicode *text;		// the text
-    double *xRight;		// right-hand x coord of each char
-    AtomString *yxNext;		// next string in y-major order
-    AtomString *xyNext;		// next string in x-major order
-    int fontpos;
-    GooString* htext;
-    int len;			// length of text and xRight
-    int size;			// size of text and xRight arrays
-    UnicodeTextDirection dir;	// direction (left to right/right to left)
-    HtmlFontAccu *fonts;
-
-    friend class AtomPage;
-
-};
 
 class AtomPage {
 public:
@@ -116,7 +82,7 @@ public:
     // Coalesce strings that look like parts of the same line.
     void coalesce();
 
-    void dump(int pageNum);
+    void dump(unsigned int pageNum, PageInfos &pageInfos);
 
     // Clear the page.
     void clear();
@@ -124,18 +90,18 @@ public:
     void conv();
     void addImage(AtomImage* img);
     void addLine(AtomLine* line);
+    void setPageBoarder(double width, double height);
 private:
     double m_fontSize;		// current font size
-    AtomString *m_curStr;		// currently active string
-
-    AtomString *m_yxStrings;	// strings in y-major order
-    AtomString *m_yxTail;	// tail cursor for m_yxStrings list
 
     HtmlFontAccu *m_fonts;
     GooList *m_imgList;
     GooList *m_lineList;
-    int m_pageWidth;
-    int m_pageHeight;
+
+    PageInfos m_pageInfos;
+    AtomBox m_lastBox;
+    AtomBox m_pageBox;
+    int m_lastBoxId;
 
     friend class AtomOutputDev;
 };
@@ -218,6 +184,8 @@ public:
     void clip(GfxState *state) override;
     void eoClip(GfxState *state) override;
 
+
+    void getInfo(unsigned int pageNum, PageInfos &pageInfos);
 private:
     void convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type);
     void drawJpegImage(GfxState *state, Stream *str);
