@@ -20,6 +20,8 @@
 #endif
 
 
+// todo: 重叠的文字.
+// todo: 字体的render
 GooString* textFilter(const Unicode* u, int uLen) {
     GooString *tmp = new GooString();
     UnicodeMap *uMap;
@@ -64,7 +66,7 @@ AtomPage::AtomPage() {
 //    m_yxTail = nullptr;	// tail cursor for m_yxStrings list
 
     m_fonts = new HtmlFontAccu();
-    m_imgList = new GooList();
+    //m_imgList = new GooList();
     m_lineList = new GooList();
     m_lastBoxId = -1;
 }
@@ -72,7 +74,7 @@ AtomPage::AtomPage() {
 AtomPage::~AtomPage() {
     this->clear();
     delete m_fonts;
-    delete m_imgList;
+    //delete m_imgList;
     delete m_lineList;
 }
 
@@ -90,11 +92,11 @@ void AtomPage::clear() {
 //    m_yxStrings = nullptr;
 //    m_yxTail = nullptr;
 
-    while (m_imgList->getLength()) {
-        int last_idx = m_imgList->getLength()-1;
-        delete((AtomImage*)m_imgList->get(last_idx));
-        m_imgList->del(last_idx);
-    }
+    //while (m_imgList->getLength()) {
+    //    int last_idx = m_imgList->getLength()-1;
+    //    delete((AtomImage*)m_imgList->get(last_idx));
+    //    m_imgList->del(last_idx);
+    //}
 
     while (m_lineList->getLength()) {
         int last_idx = m_lineList->getLength()-1;
@@ -172,7 +174,7 @@ void AtomPage::endString() {
 }
 
 void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy, double ox, double oy, Unicode *u,
-                       int uLen) {
+                       int uLen, int mcid) {
     double x1, y1, w1, h1, dx2, dy2;
     state->transform(x, y, &x1, &y1);
 //    if (m_curStr && m_curStr->len){
@@ -221,7 +223,7 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
 
     for (int i = 0; i < uLen; ++i) {
         GooString *s = textFilter (u+i, 1);
-        PdfItem item(-1, TEXT, s->getCString(), x1 + i*w1, y1 + i*h1, w1, h1, fontpos);
+        PdfItem item(mcid, TEXT, s->getCString(), x1 + i*w1, y1 + i*h1, w1, h1, fontpos);
         m_pageInfos.addItem(item, m_lastBoxId);
         delete s;
 //        m_curStr->addtextFilterChar(state, x1 + i*w1, y1 + i*h1, w1, h1, u[i]);
@@ -243,8 +245,10 @@ void AtomPage::conv() {
 //    }
 }
 
-void AtomPage::addImage(AtomImage *img) {
-    m_imgList->append((void *)img);
+void AtomPage::addImage(AtomImage img) {
+    pageInfos.m_images.push_back(PdfImage(img.xMin, img.yMin, img.xMax, img.yMax));
+
+    //m_imgList->append((void *)img);
 }
 
 void AtomPage::addLine(AtomLine *line) {
@@ -324,13 +328,13 @@ void AtomOutputDev::drawChar(GfxState *state, double x, double y,
     if ( !showHidden && (state->getRender() & 3) == 3) {
         return;
     }
-    m_pages->addChar(state, x, y, dx, dy, originX, originY, u, uLen);
+    m_pages->addChar(state, x, y, dx, dy, originX, originY, u, uLen, getMcid());
 }
 
 void AtomOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
                                   int width, int height, GBool invert,
                                   GBool interpolate, GBool inlineImg) {
-    m_pages->addImage(new AtomImage(state));
+    m_pages->addImage(AtomImage(state));
     OutputDev::drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
 //    // dump JPEG file
 //    if (str->getKind() == strDCT) {
@@ -557,6 +561,24 @@ void AtomOutputDev::eoClip(GfxState *state) {
 //    std::cout<<"eoclip:"<<xmin<<", "<<ymin<<", "<<xmax<<", "<<ymax<<std::endl;
 //    convertPath(state, state->getPath(), gTrue, 4);
 }
+
+void AtomOutputDev::beginMarkedContent(const char * name, Dict * properties){
+    int id = -1;
+    if(properties) {
+        properties->lookupInt("MCID", NULL, &id);
+    }
+
+    if (id == -1){
+        return;
+    }
+    m_mcidStack.push_back(id)
+}
+void AtomOutputDev::endMarkedContent(GfxState * state){
+    if(inMarkedContent()) {
+        m_mcidStack.pop_back();
+    }
+}
+
 
 void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
     const int n = dropEmptySubpaths ? 1 : 0;

@@ -5,7 +5,7 @@
 #ifndef POPPLER_ATOMOUTPUTDEV_H
 #define POPPLER_ATOMOUTPUTDEV_H
 
-
+#include <vector>
 #include <poppler/OutputDev.h>
 #include "poppler_atom_types.h"
 
@@ -72,7 +72,7 @@ public:
     void addChar(GfxState *state, double x, double y,
                  double dx, double dy,
                  double ox, double oy,
-                 Unicode *u, int uLen); //Guchar c);
+                 Unicode *u, int uLen, int mcid); //Guchar c);
 
     void updateFont(GfxState *state);
 //
@@ -88,7 +88,7 @@ public:
     void clear();
 
     void conv();
-    void addImage(AtomImage* img);
+    void addImage(AtomImage img);
     void addLine(AtomLine* line);
     void setPageBoarder(double width, double height);
 private:
@@ -184,13 +184,17 @@ public:
     void clip(GfxState *state) override;
     void eoClip(GfxState *state) override;
 
+    void beginMarkedContent(const char * name, Dict * properties) override;
+    void endMarkedContent(GfxState * state) override;
 
     void getInfo(unsigned int pageNum, PageInfos &pageInfos);
 private:
+    int getMcid() {return inMarkedContent()?m_mcidStack[m_mcidStack.size() - 1]:-1; }
     void convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type);
     void drawJpegImage(GfxState *state, Stream *str);
     void drawPngImage(GfxState *state, Stream *str, int width, int height, GfxImageColorMap *colorMap,
             GBool isMask=gFalse);
+    bool inMarkedContent() const { return m_mcidStack.size() > 0; }
 
     // is ok? if AtomOutputDev Construct failed, it's false.
     GBool m_ok;
@@ -200,6 +204,7 @@ private:
 
     // save pages
     AtomPage *m_pages;
+    std::vector<int> m_mcidStack;
 };
 
 

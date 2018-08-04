@@ -13,7 +13,7 @@ if [ $1 == pack ]; then
     exit 0
 elif [ $1 == unpack ]; then
     echo start unpack ... ;
-    if [ ! -d poppler-0.66.0 ]; then
+    if [ -d "poppler-0.66.0" ]; then
         echo "WARNING: directory 'poppler-0.66.0' already exits!";
     else
         unzip poppler-0.66.0.zip
