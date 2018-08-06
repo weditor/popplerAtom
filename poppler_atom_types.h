@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <map>
+#include <goo/GooList.h>
 
 struct AtomBox{
     double x1;
@@ -12,11 +13,11 @@ struct AtomBox{
     double x2;
     double y2;
 
-    HtmlBox(double x1, double y1, double x2, double x2)
+    AtomBox(double x1, double y1, double x2, double y2)
          : x1(x1), y1(y1), x2(x2), y2(y2) {}
-    HtmlBox(): x1(0), y1(0), x2(0), y2(0) {}
+    AtomBox(): x1(0), y1(0), x2(0), y2(0) {}
 
-    bool operator==(const HtmlBox &other) const 
+    bool operator==(const AtomBox &other) const 
     {
         if (&other == this) 
         {  
@@ -24,20 +25,15 @@ struct AtomBox{
         }
 
         const double ps = 1.0;
-        if (std::fabs(x1-other.x1) > ps
-            || std::fabs(x2-other.x2) > ps
-            || std::fabs(y1-other.y1) > ps
-            || std::fabs(y2-other.y2) > ps
-            )
-            {
-            return false;
-            }
-        return true;
+        return !(std::fabs(x1 - other.x1) > ps
+                 || std::fabs(x2-other.x2) > ps
+                 || std::fabs(y1-other.y1) > ps
+                 || std::fabs(y2-other.y2) > ps);
     }
 
-    bool operator != (const HtmlBox &other) const 
+    bool operator != (const AtomBox &other) const 
     {
-        return !(this==other);
+        return !(*this == other);
     }
 };
 
@@ -68,7 +64,7 @@ public:
         this->line_height = line_height;
         this->render = render;
     }
-    PdfFont(): type(0), size(0), weight(0), is_bold(false), is_italic(false), line_height(0), render(0) {}
+    PdfFont(): size(0), weight(0), is_bold(false), is_italic(false), line_height(0), type(0), render(0) {}
 };
 
 
@@ -136,8 +132,15 @@ public:
         this->bottom = bottom;
         this->font = font;
         this->style = style;
+
+//        children = new std::vector<PdfItem>;
     }
-    PdfItem(): mcid(-1), type(TEXT), left(-1), top(-1), right(-1), bottom(-1), font(-1), style(-1) {}
+    PdfItem(): mcid(-1), type(TEXT), left(-1), top(-1), right(-1), bottom(-1), font(-1), style(-1) {
+//        children = new std::vector<PdfItem>;
+    }
+    ~PdfItem(){
+//        delete((std::vector<PdfItem>*)children);
+    }
 };
 
 
@@ -157,8 +160,8 @@ public:
 class PageInfos {
 public:
     int m_page_num;
-    short m_width;
-    short m_height;
+    int m_width;
+    int m_height;
     std::vector<PdfFont> m_fonts;
     std::vector<PdfImage> m_images;
     std::vector<PdfItem> m_items;
@@ -167,7 +170,7 @@ public:
 
     PageInfos(): m_page_num(0), m_width(0), m_height(0), m_item_seq(0){}
 
-    unsigned int addItem(PdfItem &item, int parent=-1){
+    unsigned long addItem(PdfItem &item, int parent=-1){
         item.id = m_item_seq++;
         if(parent < 0) {
             m_items.push_back(item);

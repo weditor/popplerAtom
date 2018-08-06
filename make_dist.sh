@@ -8,7 +8,8 @@ if [ $1 == pack ]; then
         echo "directory 'poppler-0.66.0' not exits! run [unpack] first."
         exit 3;
     fi
-    cp -t . poppler-0.66.0/utils/PdfAtomInterface.cpp poppler-0.66.0/utils/PdfAtomInterface.h poppler-0.66.0/utils/AtomOutputDev.cpp poppler-0.66.0/utils/AtomOutputDev.h
+    cd poppler-0.66.0/utils/ && cp -t ../.. PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h \
+        poppler_atom_types.h PdfAtomCApi.cpp PdfAtomCApi.h
     echo "finish!"
     exit 0
 elif [ $1 == unpack ]; then
@@ -18,7 +19,8 @@ elif [ $1 == unpack ]; then
     else
         unzip poppler-0.66.0.zip
     fi
-    cp -t poppler-0.66.0/utils/ PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h
+    cp -t poppler-0.66.0/utils/ PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h \
+        poppler_atom_types.h PdfAtomCApi.cpp PdfAtomCApi.h
     echo "finish!"
     exit 0;
 else

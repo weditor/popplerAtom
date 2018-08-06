@@ -246,9 +246,8 @@ void AtomPage::conv() {
 }
 
 void AtomPage::addImage(AtomImage img) {
-    pageInfos.m_images.push_back(PdfImage(img.xMin, img.yMin, img.xMax, img.yMax));
-
-    //m_imgList->append((void *)img);
+    PdfImage pdfImage(img.xMin, img.yMin, img.xMax, img.yMax);
+    m_pageInfos.m_images.push_back(pdfImage);
 }
 
 void AtomPage::addLine(AtomLine *line) {
@@ -352,7 +351,7 @@ void AtomOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 void AtomOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
                               int width, int height, GfxImageColorMap *colorMap,
                               GBool interpolate, int *maskColors, GBool inlineImg) {
-    m_pages->addImage(new AtomImage(state));
+    m_pages->addImage(AtomImage(state));
     OutputDev::drawImage(state, ref, str, width, height, colorMap, interpolate,
                          maskColors, inlineImg);
     // dump JPEG file
@@ -565,13 +564,13 @@ void AtomOutputDev::eoClip(GfxState *state) {
 void AtomOutputDev::beginMarkedContent(const char * name, Dict * properties){
     int id = -1;
     if(properties) {
-        properties->lookupInt("MCID", NULL, &id);
+        properties->lookupInt("MCID", nullptr, &id);
     }
 
     if (id == -1){
         return;
     }
-    m_mcidStack.push_back(id)
+    m_mcidStack.push_back(id);
 }
 void AtomOutputDev::endMarkedContent(GfxState * state){
     if(inMarkedContent()) {

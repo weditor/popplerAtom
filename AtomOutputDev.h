@@ -45,8 +45,8 @@ public:
     explicit AtomImage(GfxState *state);
     ~AtomImage() = default;
 
-    AtomImage(const AtomImage &) = delete;
-    AtomImage& operator=(const AtomImage &) = delete;
+//    AtomImage(const AtomImage &) = delete;
+//    AtomImage& operator=(const AtomImage &) = delete;
 
     double xMin, xMax;		// image x coordinates
     double yMin, yMax;		// image y coordinates

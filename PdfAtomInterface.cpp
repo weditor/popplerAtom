@@ -48,7 +48,7 @@ PdfAtomInterface::PdfAtomInterface(const char *pdfName, const char* ownerPW, con
 }
 
 PdfAtomInterface::~PdfAtomInterface() {
-    delete globalParams;
+//    delete globalParams;
     delete(m_pdfName);
     if (m_ownerPW){
         delete(m_ownerPW);
@@ -56,10 +56,6 @@ PdfAtomInterface::~PdfAtomInterface() {
     if (m_userPW){
         delete(m_userPW);
     }
-}
-
-void PdfAtomInterface::errQuiet(GBool errQuiet) {
-    globalParams->setErrQuiet(errQuiet);
 }
 
 GBool PdfAtomInterface::isOk() {

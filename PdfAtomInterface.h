@@ -25,8 +25,6 @@ public:
     explicit PdfAtomInterface(const char *pdfName, const char* ownerPW=nullptr, const char * userPW=nullptr);
     ~PdfAtomInterface();
 
-    // todo: GlobalParams移动到外外面, 是否保持静默. 不打印错误.
-    void errQuiet(GBool flag);
     GBool isOk();
     int getNumPages();
     void getDocInfo();
