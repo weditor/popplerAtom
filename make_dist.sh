@@ -9,7 +9,7 @@ if [ $1 == pack ]; then
         exit 3;
     fi
     cd poppler-0.66.0/utils/ && cp -t ../.. PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h \
-        poppler_atom_types.h PdfAtomCApi.cpp PdfAtomCApi.h
+        poppler_atom_types.h PdfAtomCApi.cpp PdfAtomCApi.h ../pdfatom.py
     echo "finish!"
     exit 0
 elif [ $1 == unpack ]; then
@@ -21,6 +21,7 @@ elif [ $1 == unpack ]; then
     fi
     cp -t poppler-0.66.0/utils/ PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h \
         poppler_atom_types.h PdfAtomCApi.cpp PdfAtomCApi.h
+    cp pdfatom.py poppler-0.66.0/
     echo "finish!"
     exit 0;
 else

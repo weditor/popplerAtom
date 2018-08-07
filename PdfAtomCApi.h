@@ -105,6 +105,8 @@ int getNumPages(void *parser);
 CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale=1.0);
 void deletePageInfos(CPageInfos *cPageInfos);
 
+CPdfStructInfo* getStructure(void *parser, unsigned long *size);
+void deleteStructure(CPdfStructInfo *cStructInfo, unsigned long size);
 
 #ifdef __cplusplus
 }

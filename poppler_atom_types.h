@@ -47,11 +47,11 @@ public:
     std::string color;
     bool is_bold;
     bool is_italic;
-    short line_height;
+    int line_height;
     int type;
     int render;
 
-    PdfFont(int id, std::string name, int type, float size, short weight, std::string color, bool is_bold, bool is_italic, short line_height, int render)
+    PdfFont(int id, std::string name, int type, float size, short weight, std::string color, bool is_bold, bool is_italic, int line_height, int render)
     {
         this->id = id;
         this->name = name;
@@ -190,9 +190,9 @@ private:
 class PdfStructInfo {
 public:
     std::string type;
-    std::map<std::string, std::string> attribute;
     int mcid;
     int page;
+    std::map<std::string, std::string> attribute;
     std::vector<PdfStructInfo> children;
 
     PdfStructInfo(): mcid(-1), page(0) {}

@@ -4,6 +4,8 @@
 
 #include <poppler/GlobalParams.h>
 #include <poppler/PDFDocFactory.h>
+#include <poppler/StructElement.h>
+#include "StructTreeRoot.h"
 #include "PdfAtomInterface.h"
 #include "goo/GooString.h"
 #include "AtomOutputDev.h"
@@ -28,8 +30,6 @@ void destroyGlobalParams() {
 }
 
 PdfAtomInterface::PdfAtomInterface(const char *pdfName, const char* ownerPW, const char * userPW) {
-//    globalParams = new GlobalParams();
-//    globalParams.
     m_pdfName = new GooString(pdfName);
 
     // todo: 应该在打开pdf之后立即删除用户名密码??
@@ -48,7 +48,6 @@ PdfAtomInterface::PdfAtomInterface(const char *pdfName, const char* ownerPW, con
 }
 
 PdfAtomInterface::~PdfAtomInterface() {
-//    delete globalParams;
     delete(m_pdfName);
     if (m_ownerPW){
         delete(m_ownerPW);
@@ -83,11 +82,54 @@ void PdfAtomInterface::renderHtml(unsigned int pageNum, PageInfos &pageInfos, fl
     auto *atomOut = new AtomOutputDev();
     if (atomOut->isOk())
     {
-//        m_doc->displayPages(atomOut, pageNum, pageNum, DFLT_SOLUTION * scale, DFLT_SOLUTION * scale, 0,
-//                          gTrue, gFalse, gFalse);
         m_doc->displayPage(atomOut, pageNum, DFLT_SOLUTION*scale, DFLT_SOLUTION*scale, 0,
                            gTrue, gFalse, gFalse);
         atomOut->getInfo(pageNum, pageInfos);
     }
+}
+
+std::vector<PdfStructInfo> PdfAtomInterface::getStructure() {
+    std::vector<PdfStructInfo> structVec;
+    auto catalog = this->m_doc->getCatalog();
+    if (!catalog || !catalog->isOk()) {
+        return structVec;
+    }
+    StructTreeRoot* structTree = catalog->getStructTreeRoot();
+    if (!structTree) {
+        return structVec;
+    }
+    for (unsigned i = 0; i < structTree->getNumChildren(); i++) {
+        getStructureInner(structTree->getChild(i), structVec);
+    }
+    return structVec;
+}
+
+void PdfAtomInterface::getStructureInner(const StructElement *element, std::vector<PdfStructInfo> &infoVec) {
+    // todo: attrubutes, Object
+    if (element->isObjectRef()) {
+        // printf("Object %i %i\n", element->getObjectRef().num, element->getObjectRef().gen);
+        return ;
+    }
+
+    if (!element->isOk()) {
+        return ;
+    }
+    PdfStructInfo info;
+    if (element->isContent()){
+        info.type = "text";
+        info.mcid = element->getMCID();
+        Ref ref;
+        if (element->getPageRef(ref)) {
+            info.page = this->m_doc->findPage(ref.num, ref.gen);
+        }
+    }
+    else {
+        info.type = element->getTypeName();
+//        info.mcid = element->getMCID();
+        for (unsigned i = 0; i < element->getNumChildren(); i++) {
+            getStructureInner(element->getChild(i), info.children);
+        }
+    }
+    infoVec.push_back(info);
 }
 

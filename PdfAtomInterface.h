@@ -12,6 +12,7 @@
 class GlobalParams;
 class GooString;
 class PDFDoc;
+class StructElement;
 
 #define DFLT_SOLUTION 72
 
@@ -29,7 +30,9 @@ public:
     int getNumPages();
     void getDocInfo();
     void renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale=1.0);
+    std::vector<PdfStructInfo> getStructure();
 private:
+    void getStructureInner(const StructElement *element, std::vector<PdfStructInfo> &infoVec);
     GlobalParams *globalParams;
     GooString *m_pdfName;
     GooString *m_ownerPW;

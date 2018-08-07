@@ -60,13 +60,7 @@ AtomImage::AtomImage(GfxState *state) {
 
 AtomPage::AtomPage() {
     m_fontSize = 0;		// current font size
-//    m_curStr = nullptr;		// currently active string
-//
-//    m_yxStrings = nullptr;	// strings in y-major order
-//    m_yxTail = nullptr;	// tail cursor for m_yxStrings list
-
     m_fonts = new HtmlFontAccu();
-    //m_imgList = new GooList();
     m_lineList = new GooList();
     m_lastBoxId = -1;
 }
@@ -74,30 +68,10 @@ AtomPage::AtomPage() {
 AtomPage::~AtomPage() {
     this->clear();
     delete m_fonts;
-    //delete m_imgList;
     delete m_lineList;
 }
 
 void AtomPage::clear() {
-//    AtomString *p1, *p2;
-
-//    if (m_curStr) {
-//        delete m_curStr;
-//        m_curStr = nullptr;
-//    }
-//    for (p1 = m_yxStrings; p1; p1 = p2) {
-//        p2 = p1->yxNext;
-//        delete p1;
-//    }
-//    m_yxStrings = nullptr;
-//    m_yxTail = nullptr;
-
-    //while (m_imgList->getLength()) {
-    //    int last_idx = m_imgList->getLength()-1;
-    //    delete((AtomImage*)m_imgList->get(last_idx));
-    //    m_imgList->del(last_idx);
-    //}
-
     while (m_lineList->getLength()) {
         int last_idx = m_lineList->getLength()-1;
         delete((AtomLine*)m_lineList->get(last_idx));
@@ -205,7 +179,8 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
     }
 
     int fontpos = -1;
-    if(GfxFont *font = state->getFont()) {
+    GfxFont *font = state->getFont();
+    if(font) {
         GfxRGB rgb;
         state->getFillRGB(&rgb);
         // todo: 增加render, type.
@@ -231,18 +206,7 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
 }
 
 void AtomPage::conv() {
-//    AtomString *tmp;
-//
-//    HtmlFont* h;
-//    for(tmp=m_yxStrings;tmp;tmp=tmp->yxNext){
-//        int pos=tmp->fontpos;
-//        //  printf("%d\n",pos);
-//        h=m_fonts->Get(pos);
-//
-//        delete tmp->htext;
-//        tmp->htext=HtmlFont::simple(h,tmp->text,tmp->len);
-////        std::cout<<"text:"<<tmp->htext->getCString()<<std::endl;
-//    }
+
 }
 
 void AtomPage::addImage(AtomImage img) {
@@ -252,7 +216,8 @@ void AtomPage::addImage(AtomImage img) {
 
 void AtomPage::addLine(AtomLine *line) {
 //    std::cout<<"line:("<<line->m_type<<") "<<line->m_p0.x<<", "<<line->m_p0.y<<", "<<line->m_p1.x<<", "<<line->m_p1.y<<std::endl;
-    m_lineList->append((void *)line);
+//    m_lineList->append((void *)line);
+//    m_pageInfos.m_lines.push_back(line)
 }
 
 
@@ -265,15 +230,16 @@ void AtomPage::coalesce() {
 }
 
 void AtomPage::dump(unsigned int pageNum, PageInfos &pageInfos) {
-//    AtomString *p1, *p2;
-//    for (p1 = m_yxStrings; p1; p1 = p2) {
-//        p2 = p1->yxNext;
-//        pageInfos.addItem();
-//    }
-//    m_yxStrings = nullptr;
-//    m_yxTail = nullptr;
-//    this->clear();
     pageInfos = m_pageInfos;
+    for (int i = 0; i < m_fonts->size(); ++i) {
+        // todo: add render, type, weight
+        auto font = m_fonts->Get(0);
+        GooString *color = font->getColor().toString();
+        PdfFont pdfFont(i, font->getFullName()->getCString(), 1, font->getSize(), 100, color->getCString(),
+                font->isBold(), font->isItalic(), font->getLineSize(), 0);
+        delete(color);
+        pageInfos.m_fonts.push_back(pdfFont);
+    }
     pageInfos.m_page_num = pageNum;
     pageInfos.m_width = int(m_pageBox.x2);
     pageInfos.m_height = int(m_pageBox.y2);

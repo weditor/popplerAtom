@@ -64,7 +64,7 @@ static CPdfItem* copyItems(const std::vector<PdfItem> &pdfItems) {
 
 static void deleteItems(CPdfItem* pdfItem, size_t size) {
     for (size_t i = 0; i < size; ++i) {
-        delete(pdfItem[i].text);
+        delete [] pdfItem[i].text;
         deleteItems(pdfItem[i].children, pdfItem[i].children_len);
     }
     delete [] pdfItem;
@@ -128,8 +128,8 @@ CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale) {
 
 void deletePageInfos(CPageInfos *cPageInfos) {
     for (size_t i = 0; i < cPageInfos->font_len; ++i) {
-        delete(cPageInfos->fonts[i].name);
-        delete(cPageInfos->fonts[i].color);
+        delete [] cPageInfos->fonts[i].name;
+        delete [] cPageInfos->fonts[i].color;
     }
     delete [] cPageInfos->fonts;
     delete [] cPageInfos->images;
@@ -140,6 +140,39 @@ void deletePageInfos(CPageInfos *cPageInfos) {
     delete [] cPageInfos->graphs;
 
     delete cPageInfos;
+}
+
+
+static CPdfStructInfo * copyStruct(std::vector<PdfStructInfo> structInfo) {
+    if (structInfo.empty()) {
+        return nullptr;
+    }
+    auto * cStructInfo = new CPdfStructInfo[structInfo.size()];
+    for (size_t i = 0; i < structInfo.size(); ++i) {
+        cStructInfo[i].type = string2char(structInfo[i].type);
+        cStructInfo[i].mcid = structInfo[i].mcid;
+        cStructInfo[i].page = structInfo[i].page;
+        cStructInfo[i].children_len = structInfo[i].children.size();
+        cStructInfo[i].children = copyStruct(structInfo[i].children);
+    }
+    return cStructInfo;
+}
+
+CPdfStructInfo *getStructure(void *parser, unsigned long * size) {
+    std::vector<PdfStructInfo> structInfo = ((PdfAtomInterface*)parser)->getStructure();
+    if (structInfo.empty()){
+        return nullptr;
+    }
+    *size = structInfo.size();
+    return copyStruct(structInfo);
+}
+
+void deleteStructure(CPdfStructInfo *cStructInfo, unsigned long size) {
+    for (size_t i = 0; i < size; ++i) {
+        delete [] cStructInfo[i].type;
+        deleteStructure(cStructInfo[i].children, cStructInfo[i].children_len);
+    }
+    delete [] cStructInfo;
 }
 
 
