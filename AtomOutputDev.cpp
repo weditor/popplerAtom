@@ -179,8 +179,7 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
     }
 
     int fontpos = -1;
-    GfxFont *font = state->getFont();
-    if(font) {
+    if(GfxFont *font = state->getFont()) {
         GfxRGB rgb;
         state->getFillRGB(&rgb);
         // todo: 增加render, type.
@@ -214,10 +213,8 @@ void AtomPage::addImage(AtomImage img) {
     m_pageInfos.m_images.push_back(pdfImage);
 }
 
-void AtomPage::addLine(AtomLine *line) {
-//    std::cout<<"line:("<<line->m_type<<") "<<line->m_p0.x<<", "<<line->m_p0.y<<", "<<line->m_p1.x<<", "<<line->m_p1.y<<std::endl;
-//    m_lineList->append((void *)line);
-//    m_pageInfos.m_lines.push_back(line)
+void AtomPage::addLine(PdfShape shape) {
+    m_pageInfos.m_lines.push_back(shape);
 }
 
 
@@ -547,38 +544,40 @@ void AtomOutputDev::endMarkedContent(GfxState * state){
 
 void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
     const int n = dropEmptySubpaths ? 1 : 0;
-
+    PdfShape shape(type);
     for (int i = 0; i < path->getNumSubpaths(); ++i) {
         GfxSubpath *subpath = path->getSubpath(i);
-        if (subpath->getNumPoints() > n) {
-            double lastX=subpath->getX(0), lastY=subpath->getY(0);
-            int j = 1;
-            while (j < subpath->getNumPoints()) {
-                if (subpath->getCurve(j)) {
-                    // 绘制圆弧
-                    m_pages->addLine(new AtomLine(
-                            type,
-                            AtomPoint(subpath->getX(j), subpath->getY(j)),
-                            AtomPoint(subpath->getX(j + 2), subpath->getY(j + 2)),
-                            AtomPoint(subpath->getX(j + 1), subpath->getY(j + 1))
-                    ));
-                    lastX = subpath->getX(j + 2);
-                    lastY = subpath->getY(j + 2);
-                    j += 3;
-                } else {
-                    // 绘制直线.
-                    m_pages->addLine(new AtomLine(
-                            type,
-                            AtomPoint(lastX, lastY),
-                            AtomPoint(subpath->getX(j), subpath->getY(j))
-                    ));
-                    lastX = subpath->getX(j);
-                    lastY = subpath->getY(j);
-                    ++j;
-                }
+        if (subpath->getNumPoints() <= n) {
+            continue;
+        }
+        PdfPath pdfPath;
+        double lastX=subpath->getX(0), lastY=subpath->getY(0);
+        int j = 1;
+        while (j < subpath->getNumPoints()) {
+            if (subpath->getCurve(j)) {
+                // 绘制圆弧
+                pdfPath.lines.push_back(PdfLine(
+                    subpath->getX(j), subpath->getY(j),
+                    subpath->getX(j + 1), subpath->getY(j + 1),
+                    subpath->getX(j + 2), subpath->getY(j + 2)
+                ));
+                lastX = subpath->getX(j + 2);
+                lastY = subpath->getY(j + 2);
+                j += 3;
+            } else {
+                // 绘制直线.
+                pdfPath.lines.push_back(PdfLine(
+                    lastX, lastY,
+                    subpath->getX(j), subpath->getY(j),
+                ));
+                lastX = subpath->getX(j);
+                lastY = subpath->getY(j);
+                ++j;
             }
         }
+        shape.pathes.push_back(pdfPath);
     }
+    m_pages->addLine(shape);
 }
 
 void AtomOutputDev::getInfo(unsigned int pageNum, PageInfos &pageInfos) {

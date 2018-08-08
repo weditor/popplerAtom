@@ -144,7 +144,7 @@ public:
 };
 
 
-class PdfLine {
+/*class PdfLine {
 public:
     int x0;
     int y0;
@@ -154,6 +154,38 @@ public:
 
     PdfLine(int x0, int y0, int x1, int y1, int type=1): x0(x0), y0(y0), x1(x1), y1(y1), type(type){}
     PdfLine(): x0(-1), y0(-1), x1(-1), y1(-1), type(-1){}
+};*/
+
+
+class PdfLine {
+public:
+    int x0;
+    int y0;
+    int x1;
+    int y1;
+    int cx;
+    int cy;
+    int type;
+    PdfLine(int x0, int y0, int x1, int y1)
+        : x0(x0), y0(y0), x1(x1), y1(y1), cx(-1), cy(-1), type(0){}
+    PdfLine(int x0, int y0, int x1, int y1, int cx, int cy)
+        : x0(x0), y0(y0), x1(x1), y1(y1), cx(cx), cy(cy), type(1){}
+    PdfLine()
+        : x0(-1), y0(-1), x1(-1), y1(-1), cx(-1), cy(-1), type(-1){}
+};
+
+
+class PdfPath {
+public:
+    std::vector<PdfLine> lines;
+};
+
+class PdfShape {
+public:
+    int type;
+    std::vector<PdfPath> pathes;
+
+    PdfShape(int type):type(type){}
 };
 
 
@@ -165,8 +197,8 @@ public:
     std::vector<PdfFont> m_fonts;
     std::vector<PdfImage> m_images;
     std::vector<PdfItem> m_items;
-    std::vector<PdfLine> m_lines;
-    std::vector<PdfLine> m_graphs;
+    std::vector<PdfShape> m_lines;
+    std::vector<PdfShape> m_graphs;
 
     PageInfos(): m_page_num(0), m_width(0), m_height(0), m_item_seq(0){}
 

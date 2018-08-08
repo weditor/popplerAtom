@@ -89,7 +89,7 @@ public:
 
     void conv();
     void addImage(AtomImage img);
-    void addLine(AtomLine* line);
+    void addLine(PdfShape shape);
     void setPageBoarder(double width, double height);
 private:
     double m_fontSize;		// current font size
