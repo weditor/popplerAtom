@@ -24,7 +24,7 @@ struct CPdfFont {
     char * color;
     bool is_bold;
     bool is_italic;
-    short line_height;
+    int line_height;
     int type;
     int render;
 };
@@ -58,7 +58,20 @@ struct CPdfLine {
     int y0;
     int x1;
     int y1;
+    int cx;
+    int cy;
     int type;
+};
+
+struct CPdfPath {
+    CPdfLine* lines;
+    unsigned long line_len;
+};
+
+struct CPdfShape {
+    int type;
+    CPdfPath* pathes;
+    unsigned long path_len;
 };
 
 struct CPageInfos {
@@ -71,9 +84,9 @@ struct CPageInfos {
     unsigned long image_len;
     CPdfItem* items;
     unsigned long item_len;
-    CPdfLine* lines;
+    CPdfShape* lines;
     unsigned long line_len;
-    CPdfLine* graphs;
+    CPdfShape* graphs;
     unsigned long graph_len;
 };
 
@@ -93,7 +106,7 @@ struct CPdfStructInfo {
     unsigned long children_len;
 };
 
-extern void c_initGlobalParams();
+extern void c_initGlobalParams(const char* popplerData = nullptr);
 extern void c_destroyGlobalParams();
 
 void * createAtomParser(const char *fileName, const char * ownerPW=nullptr, const char * userPW=nullptr);

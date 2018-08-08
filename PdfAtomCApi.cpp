@@ -3,13 +3,14 @@
 //
 
 
+#include <iostream>
 #include <cstring>
 #include "poppler_atom_types.h"
 #include "PdfAtomInterface.h"
 #include "PdfAtomCApi.h"
 
-void c_initGlobalParams() {
-    initGlobalParams();
+void c_initGlobalParams(const char* popplerData) {
+    initGlobalParams(popplerData);
 }
 
 void c_destroyGlobalParams(){
@@ -41,6 +42,10 @@ static char* string2char(const std::string &str) {
 
 
 static CPdfItem* copyItems(const std::vector<PdfItem> &pdfItems) {
+    if (pdfItems.empty()) {
+        return nullptr;
+    }
+
     auto* items = new CPdfItem[pdfItems.size()];
     for (size_t i = 0; i < pdfItems.size(); ++i) {
         items[i].id = pdfItems[i].id;
@@ -70,21 +75,57 @@ static void deleteItems(CPdfItem* pdfItem, size_t size) {
     delete [] pdfItem;
 }
 
-static CPdfLine* copylines(const std::vector<PdfLine> &pdfLines) {
-    auto cPdfLine = new CPdfLine[pdfLines.size()];
-    for (size_t i = 0; i < pdfLines.size(); ++i) {
-        cPdfLine[i].type = pdfLines[i].type;
-        cPdfLine[i].x0 = pdfLines[i].x0;
-        cPdfLine[i].y0 = pdfLines[i].y0;
-        cPdfLine[i].x1 = pdfLines[i].x1;
-        cPdfLine[i].y1 = pdfLines[i].y1;
+static CPdfShape* copylines(const std::vector<PdfShape> &pdfShapes) {
+    if (pdfShapes.empty()) {
+        return nullptr;
     }
-    return cPdfLine;
+
+    auto *cPdfShape = new CPdfShape[pdfShapes.size()];
+    for (unsigned long i = 0; i < pdfShapes.size(); ++i) {
+        cPdfShape[i].type = pdfShapes[i].type;
+        cPdfShape[i].path_len = pdfShapes[i].pathes.size();
+        cPdfShape[i].pathes = new CPdfPath[pdfShapes[i].pathes.size()];
+
+        for (unsigned long j = 0; j < pdfShapes[i].pathes.size(); ++j) {
+
+            CPdfPath &cPdfPath = cPdfShape[i].pathes[j];
+            const PdfPath &pdfPath = pdfShapes[i].pathes[j];
+
+            cPdfPath.line_len = pdfShapes[i].pathes[j].lines.size();
+            cPdfPath.lines = new CPdfLine[pdfPath.lines.size()];
+            for (unsigned long k = 0; k < pdfPath.lines.size(); ++k) {
+                cPdfPath.lines[k].type = pdfPath.lines[k].type;
+                cPdfPath.lines[k].x0 = pdfPath.lines[k].x0;
+                cPdfPath.lines[k].y0 = pdfPath.lines[k].y0;
+                cPdfPath.lines[k].x1 = pdfPath.lines[k].x1;
+                cPdfPath.lines[k].y1 = pdfPath.lines[k].y1;
+                cPdfPath.lines[k].cx = pdfPath.lines[k].cx;
+                cPdfPath.lines[k].cy = pdfPath.lines[k].cy;
+            }
+        }
+    }
+    return cPdfShape;
+}
+
+static void deleteLines(CPdfShape* pdfShape, unsigned long size) {
+
+    for (unsigned long i = 0; i < size; ++i) {
+        for (unsigned long j = 0; j < pdfShape[i].path_len; ++j) {
+            delete [] pdfShape[i].pathes[j].lines;
+        }
+        delete [] pdfShape[i].pathes;
+    }
+    delete [] pdfShape;
 }
 
 CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale) {
+//    std::cout<<"parser:"<<parser<<std::endl;
+//    std::cout<<"pageNum:"<<pageNum<<std::endl;
+//    std::cout<<"scale:"<<scale<<std::endl;
     PageInfos pageInfo;
     ((PdfAtomInterface*)parser)->renderHtml(pageNum, pageInfo, scale);
+//    std::cout<<"renderHtml success"<<std::endl;
+
     auto *cPageInfos = new CPageInfos();
     cPageInfos->page_num = pageInfo.m_page_num;
     cPageInfos->width = pageInfo.m_width;
@@ -113,7 +154,6 @@ CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale) {
         cPageInfos->images[i].right = pageInfo.m_images[i].right;
         cPageInfos->images[i].bottom = pageInfo.m_images[i].bottom;
     }
-
     cPageInfos->item_len = pageInfo.m_items.size();
     cPageInfos->items = copyItems(pageInfo.m_items);
 
@@ -123,6 +163,7 @@ CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale) {
     cPageInfos->graph_len = pageInfo.m_graphs.size();
     cPageInfos->graphs = copylines(pageInfo.m_graphs);
 
+//    delete(&pageInfo);
     return cPageInfos;
 }
 
@@ -135,9 +176,8 @@ void deletePageInfos(CPageInfos *cPageInfos) {
     delete [] cPageInfos->images;
 
     deleteItems(cPageInfos->items, cPageInfos->item_len);
-
-    delete [] cPageInfos->lines;
-    delete [] cPageInfos->graphs;
+    deleteLines(cPageInfos->lines, cPageInfos->line_len);
+    deleteLines(cPageInfos->graphs, cPageInfos->graph_len);
 
     delete cPageInfos;
 }

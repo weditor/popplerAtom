@@ -13,11 +13,13 @@ class GlobalParams;
 class GooString;
 class PDFDoc;
 class StructElement;
+class AtomOutputDev;
+
 
 #define DFLT_SOLUTION 72
 
 
-extern void initGlobalParams();
+extern void initGlobalParams(const char* popplerData = nullptr);
 extern void destroyGlobalParams();
 
 
@@ -38,6 +40,7 @@ private:
     GooString *m_ownerPW;
     GooString *m_userPW;
     PDFDoc *m_doc;
+    AtomOutputDev *m_atomOutputDev;
 };
 
 

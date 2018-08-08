@@ -232,8 +232,10 @@ void AtomPage::dump(unsigned int pageNum, PageInfos &pageInfos) {
         // todo: add render, type, weight
         auto font = m_fonts->Get(0);
         GooString *color = font->getColor().toString();
-        PdfFont pdfFont(i, font->getFullName()->getCString(), 1, font->getSize(), 100, color->getCString(),
+        GooString *fontName = font->getFullName();
+        PdfFont pdfFont(i, fontName->getCString(), 1, font->getSize(), 100, color->getCString(),
                 font->isBold(), font->isItalic(), font->getLineSize(), 0);
+        delete(fontName);
         delete(color);
         pageInfos.m_fonts.push_back(pdfFont);
     }
@@ -556,20 +558,22 @@ void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptyS
         while (j < subpath->getNumPoints()) {
             if (subpath->getCurve(j)) {
                 // 绘制圆弧
-                pdfPath.lines.push_back(PdfLine(
+                PdfLine pdfLine(
                     subpath->getX(j), subpath->getY(j),
                     subpath->getX(j + 1), subpath->getY(j + 1),
                     subpath->getX(j + 2), subpath->getY(j + 2)
-                ));
+                );
+                pdfPath.lines.push_back(pdfLine);
                 lastX = subpath->getX(j + 2);
                 lastY = subpath->getY(j + 2);
                 j += 3;
             } else {
                 // 绘制直线.
-                pdfPath.lines.push_back(PdfLine(
+                PdfLine pdfLine(
                     lastX, lastY,
-                    subpath->getX(j), subpath->getY(j),
-                ));
+                    subpath->getX(j), subpath->getY(j)
+                );
+                pdfPath.lines.push_back(pdfLine);
                 lastX = subpath->getX(j);
                 lastY = subpath->getY(j);
                 ++j;

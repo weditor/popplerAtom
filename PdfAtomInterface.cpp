@@ -14,11 +14,15 @@
 GBool fontFullName = gFalse;
 GBool xml = gFalse;
 
-extern GlobalParams *globalParams;
 
-void initGlobalParams(){
+void initGlobalParams(const char* popplerData){
     if(!globalParams) {
-        globalParams = new GlobalParams("/usr/share/poppler");
+        if (popplerData){
+            globalParams = new GlobalParams(popplerData);
+        }
+        else {
+            globalParams = new GlobalParams("/usr/share/poppler");
+        }
     }
 }
 
@@ -45,20 +49,23 @@ PdfAtomInterface::PdfAtomInterface(const char *pdfName, const char* ownerPW, con
     }
 
     m_doc = PDFDocFactory().createPDFDoc(*m_pdfName, m_ownerPW, m_userPW);
+    m_atomOutputDev = new AtomOutputDev();
 }
 
 PdfAtomInterface::~PdfAtomInterface() {
-    delete(m_pdfName);
+    delete(m_doc);
+    delete(m_atomOutputDev);
     if (m_ownerPW){
         delete(m_ownerPW);
     }
     if (m_userPW){
         delete(m_userPW);
     }
+    delete(m_pdfName);
 }
 
 GBool PdfAtomInterface::isOk() {
-    return m_doc->isOk();
+    return m_doc->isOk() && m_atomOutputDev->isOk();
 }
 
 int PdfAtomInterface::getNumPages() {
@@ -79,13 +86,9 @@ void PdfAtomInterface::getDocInfo() {
 }
 
 void PdfAtomInterface::renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale) {
-    auto *atomOut = new AtomOutputDev();
-    if (atomOut->isOk())
-    {
-        m_doc->displayPage(atomOut, pageNum, DFLT_SOLUTION*scale, DFLT_SOLUTION*scale, 0,
-                           gTrue, gFalse, gFalse);
-        atomOut->getInfo(pageNum, pageInfos);
-    }
+    m_doc->displayPage(m_atomOutputDev, pageNum, DFLT_SOLUTION*scale, DFLT_SOLUTION*scale, 0,
+                       gTrue, gFalse, gFalse);
+    m_atomOutputDev->getInfo(pageNum, pageInfos);
 }
 
 std::vector<PdfStructInfo> PdfAtomInterface::getStructure() {
