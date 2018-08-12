@@ -23,7 +23,7 @@
 // todo: 重叠的文字.
 // todo: 字体的render
 GooString* textFilter(const Unicode* u, int uLen) {
-    GooString *tmp = new GooString();
+    auto *tmp = new GooString();
     UnicodeMap *uMap;
     char buf[8];
     int n;
@@ -120,40 +120,15 @@ void AtomPage::updateFont(GfxState *state) {
 }
 
 void AtomPage::beginString(GfxState *state, const GooString *s) {
-    // todo: remember to free it.
-//    m_curStr = new AtomString(state, m_fontSize, m_fonts);
 }
 
 void AtomPage::endString() {
-    // throw away zero-length strings -- they don't have valid xMin/xMax
-    // values, and they're useless anyway
-
-//    if (m_curStr->len == 0) {
-//        delete m_curStr;
-//        m_curStr = nullptr;
-//        return;
-//    }
-//
-//    m_curStr->endString();
-//
-//    // insert string in y-major list
-////    m_yxTail = m_curStr;
-//    if (m_yxTail)
-//        m_yxTail->yxNext = m_curStr;
-//    else
-//        m_yxStrings = m_curStr;
-//    m_yxTail = m_curStr;
-//    m_curStr->yxNext = nullptr;
-//    m_curStr = nullptr;
 }
 
 void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy, double ox, double oy, Unicode *u,
                        int uLen, int mcid) {
     double x1, y1, w1, h1, dx2, dy2;
     state->transform(x, y, &x1, &y1);
-//    if (m_curStr && m_curStr->len){
-//        endString();
-//    }
     beginString(state, nullptr);
     state->textTransformDelta(state->getCharSpace() * state->getHorizScaling(), 0, &dx2, &dy2);
     dx -= dx2;
@@ -197,10 +172,9 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
 
     for (int i = 0; i < uLen; ++i) {
         GooString *s = textFilter (u+i, 1);
-        PdfItem item(mcid, TEXT, s->getCString(), x1 + i*w1, y1 + i*h1, w1, h1, fontpos);
+        PdfItem item(mcid, TEXT, s->getCString(), x1 + i*w1, y1 + i*h1, x1 + (i+1)*w1, h1, fontpos);
         m_pageInfos.addItem(item, m_lastBoxId);
         delete s;
-//        m_curStr->addtextFilterChar(state, x1 + i*w1, y1 + i*h1, w1, h1, u[i]);
     }
 }
 
@@ -264,8 +238,6 @@ void AtomOutputDev::startPage(int pageNum, GfxState *state, XRef *xref) {
 }
 
 void AtomOutputDev::endPage() {
-//    OutputDev::endPage();
-
     m_pages->conv();
     m_pages->coalesce();
 }
@@ -300,17 +272,6 @@ void AtomOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
                                   GBool interpolate, GBool inlineImg) {
     m_pages->addImage(AtomImage(state));
     OutputDev::drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
-//    // dump JPEG file
-//    if (str->getKind() == strDCT) {
-//        drawJpegImage(state, str);
-//    }
-//    else {
-//#ifdef ENABLE_LIBPNG
-//        drawPngImage(state, str, width, height, nullptr, gTrue);
-//#else
-//        OutputDev::drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
-//#endif
-//    }
 }
 
 void AtomOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
@@ -319,19 +280,6 @@ void AtomOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     m_pages->addImage(AtomImage(state));
     OutputDev::drawImage(state, ref, str, width, height, colorMap, interpolate,
                          maskColors, inlineImg);
-    // dump JPEG file
-//    if (str->getKind() == strDCT && (colorMap->getNumPixelComps() == 1 ||
-//                                                 colorMap->getNumPixelComps() == 3) && !inlineImg) {
-//        drawJpegImage(state, str);
-//    }
-//    else {
-//#ifdef ENABLE_LIBPNG
-//        drawPngImage(state, str, width, height, colorMap);
-//#else
-//        OutputDev::drawImage(state, ref, str, width, height, colorMap, interpolate,
-//                         maskColors, inlineImg);
-//#endif
-//    }
 }
 
 void AtomOutputDev::drawJpegImage(GfxState *state, Stream *str)
@@ -547,35 +495,37 @@ void AtomOutputDev::endMarkedContent(GfxState * state){
 void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
     const int n = dropEmptySubpaths ? 1 : 0;
     PdfShape shape(type);
+//    const int width = m_pages->m_pageInfos.m_width;
+    const double height = m_pages->m_pageBox.y2 - m_pages->m_pageBox.y1;
     for (int i = 0; i < path->getNumSubpaths(); ++i) {
         GfxSubpath *subpath = path->getSubpath(i);
         if (subpath->getNumPoints() <= n) {
             continue;
         }
         PdfPath pdfPath;
-        double lastX=subpath->getX(0), lastY=subpath->getY(0);
+        double lastX=subpath->getX(0), lastY=height-subpath->getY(0);
         int j = 1;
         while (j < subpath->getNumPoints()) {
             if (subpath->getCurve(j)) {
                 // 绘制圆弧
                 PdfLine pdfLine(
-                    subpath->getX(j), subpath->getY(j),
-                    subpath->getX(j + 1), subpath->getY(j + 1),
-                    subpath->getX(j + 2), subpath->getY(j + 2)
+                    subpath->getX(j), height-subpath->getY(j),
+                    subpath->getX(j + 1), height-subpath->getY(j + 1),
+                    subpath->getX(j + 2), height-subpath->getY(j + 2)
                 );
                 pdfPath.lines.push_back(pdfLine);
                 lastX = subpath->getX(j + 2);
-                lastY = subpath->getY(j + 2);
+                lastY = height-subpath->getY(j + 2);
                 j += 3;
             } else {
                 // 绘制直线.
                 PdfLine pdfLine(
                     lastX, lastY,
-                    subpath->getX(j), subpath->getY(j)
+                    subpath->getX(j), height-subpath->getY(j)
                 );
                 pdfPath.lines.push_back(pdfLine);
                 lastX = subpath->getX(j);
-                lastY = subpath->getY(j);
+                lastY = height-subpath->getY(j);
                 ++j;
             }
         }
