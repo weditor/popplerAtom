@@ -15,6 +15,7 @@ class HtmlFontAccu;
 class GfxPath;
 class GooList;
 class GooString;
+class SplashPath;
 
 
 GooString* textFilter(const Unicode* u, int uLen);
@@ -160,6 +161,11 @@ public:
     // End a page.
     void endPage() override;
 
+    void updateCTM(GfxState *state, double m11, double m12,
+                                  double m21, double m22,
+                                  double m31, double m32) override;
+    void updateFlatness(GfxState *state) override;
+
     //----- update text state
     void updateFont(GfxState *state) override;
 
@@ -190,12 +196,14 @@ public:
     void getInfo(unsigned int pageNum, PageInfos &pageInfos);
 private:
     int getMcid() {return inMarkedContent()?m_mcidStack[m_mcidStack.size() - 1]:-1; }
-    void convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type);
+    void convertPath2(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type);
+    SplashPath *convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths);
     void drawJpegImage(GfxState *state, Stream *str);
     void drawPngImage(GfxState *state, Stream *str, int width, int height, GfxImageColorMap *colorMap,
             GBool isMask=gFalse);
     bool inMarkedContent() const { return m_mcidStack.size() > 0; }
-
+    void setFlatness(double flatness) ;
+    void getSplashXPath(SplashPath *path);
     // is ok? if AtomOutputDev Construct failed, it's false.
     GBool m_ok;
 
@@ -205,6 +213,9 @@ private:
     // save pages
     AtomPage *m_pages;
     std::vector<int> m_mcidStack;
+
+    double m_matrix[6];
+    double m_flatness;
 };
 
 

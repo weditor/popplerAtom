@@ -12,6 +12,10 @@
 #include <goo/GooList.h>
 #include "HtmlFonts.h"
 
+#include "SplashOutputDev.h"
+#include "splash/SplashPath.h"
+
+
 #ifdef ENABLE_LIBPNG
 #include <png.h>
 #include <poppler/UnicodeMap.h>
@@ -224,6 +228,7 @@ void AtomPage::dump(unsigned int pageNum, PageInfos &pageInfos) {
 AtomOutputDev::AtomOutputDev() {
     m_pages = new AtomPage();
     m_ok = gTrue;
+    memset(m_matrix, 0, sizeof(m_matrix));
 }
 
 AtomOutputDev::~AtomOutputDev() {
@@ -231,7 +236,18 @@ AtomOutputDev::~AtomOutputDev() {
 }
 
 void AtomOutputDev::startPage(int pageNum, GfxState *state, XRef *xref) {
-//    OutputDev::startPage(pageNum, state, xref);
+//    todo:
+    if (state) {
+        const double * const ctm = state->getCTM();
+        m_matrix[0] = ctm[0];
+        m_matrix[1] = ctm[1];
+        m_matrix[2] = ctm[2];
+        m_matrix[3] = ctm[3];
+        m_matrix[4] = ctm[4];
+        m_matrix[5] = ctm[5];
+    }
+    setFlatness(1);
+
     this->m_pageNum = pageNum;
     m_pages->clear();
     m_pages->setPageBoarder(state->getPageWidth(), state->getPageHeight());
@@ -240,6 +256,19 @@ void AtomOutputDev::startPage(int pageNum, GfxState *state, XRef *xref) {
 void AtomOutputDev::endPage() {
     m_pages->conv();
     m_pages->coalesce();
+    memset(m_matrix, 0, sizeof(m_matrix));
+}
+
+void AtomOutputDev::updateCTM(GfxState *state, double m11, double m12,
+                                double m21, double m22,
+                                double m31, double m32) {
+    const double * ctm = state->getCTM();
+    m_matrix[0] = ctm[0];
+    m_matrix[1] = ctm[1];
+    m_matrix[2] = ctm[2];
+    m_matrix[3] = ctm[3];
+    m_matrix[4] = ctm[4];
+    m_matrix[5] = ctm[5];
 }
 
 void AtomOutputDev::updateFont(GfxState *state) {
@@ -443,21 +472,23 @@ void AtomOutputDev::stroke(GfxState *state) {
     if (state->getStrokeColorSpace()->isNonMarking()) {
         return;
     }
-    convertPath(state, state->getPath(), gFalse, 0);
+    convertPath(state, state->getPath(), gFalse);
 }
 
 void AtomOutputDev::fill(GfxState *state) {
     if (state->getFillColorSpace()->isNonMarking()) {
         return;
     }
-    convertPath(state, state->getPath(), gTrue, 1);
+    convertPath(state, state->getPath(), gTrue);
 }
 
 void AtomOutputDev::eoFill(GfxState *state) {
     if (state->getFillColorSpace()->isNonMarking()) {
         return;
     }
-    convertPath(state, state->getPath(), gTrue, 2);
+    // todo: complete it.
+    SplashPath *path = convertPath(state, state->getPath(), gTrue);
+    SplashXPath *xpath = getSplashXPath(path);
 }
 
 void AtomOutputDev::clip(GfxState *state) {
@@ -492,7 +523,7 @@ void AtomOutputDev::endMarkedContent(GfxState * state){
 }
 
 
-void AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
+void AtomOutputDev::convertPath2(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
     const int n = dropEmptySubpaths ? 1 : 0;
     PdfShape shape(type);
 //    const int width = m_pages->m_pageInfos.m_width;
@@ -538,3 +569,62 @@ void AtomOutputDev::getInfo(unsigned int pageNum, PageInfos &pageInfos) {
     m_pages->dump(pageNum, pageInfos);
 }
 
+SplashPath *AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths) {
+    SplashPath *sPath;
+    GfxSubpath *subpath;
+    int n, i, j;
+
+    n = dropEmptySubpaths ? 1 : 0;
+    sPath = new SplashPath();
+    for (i = 0; i < path->getNumSubpaths(); ++i) {
+        subpath = path->getSubpath(i);
+        if (subpath->getNumPoints() > n) {
+            sPath->reserve(subpath->getNumPoints() + 1);
+            sPath->moveTo((SplashCoord)subpath->getX(0),
+                          (SplashCoord)subpath->getY(0));
+            j = 1;
+            while (j < subpath->getNumPoints()) {
+                if (subpath->getCurve(j)) {
+                    sPath->curveTo((SplashCoord)subpath->getX(j),
+                                   (SplashCoord)subpath->getY(j),
+                                   (SplashCoord)subpath->getX(j+1),
+                                   (SplashCoord)subpath->getY(j+1),
+                                   (SplashCoord)subpath->getX(j+2),
+                                   (SplashCoord)subpath->getY(j+2));
+                    j += 3;
+                } else {
+                    sPath->lineTo((SplashCoord)subpath->getX(j),
+                                  (SplashCoord)subpath->getY(j));
+                    ++j;
+                }
+            }
+            if (subpath->isClosed()) {
+                sPath->close();
+            }
+        }
+    }
+    return sPath;
+}
+
+void AtomOutputDev::updateFlatness(GfxState *state) {
+#if 0 // Acrobat ignores the flatness setting, and always renders curves
+    // with a fairly small flatness value
+   splash->setFlatness(state->getFlatness());
+#endif
+}
+
+void AtomOutputDev::setFlatness(const double flatness) {
+    if (flatness < 1) {
+        m_flatness = 1;
+    } else {
+        m_flatness = flatness;
+    }
+}
+
+
+SplashXPath* AtomOutputDev::getSplashXPath(SplashPath *path) {
+    GBool adjustLine = gFalse;
+    int linePosI = 0;
+    return new SplashXPath(path, m_matrix, m_flatness, gTrue,
+                            adjustLine, linePosI);
+}
