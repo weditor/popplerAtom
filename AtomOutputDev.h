@@ -21,6 +21,88 @@ class SplashPath;
 GooString* textFilter(const Unicode* u, int uLen);
 
 
+struct SplashXPathPoint {
+    double x, y;
+};
+
+struct SplashXPathAdjust {
+    int firstPt, lastPt;		// range of points
+    GBool vert;			// vertical or horizontal hint
+    double x0a, x0b,		// hint boundaries
+            xma, xmb,
+            x1a, x1b;
+    double x0, x1, xm;	// adjusted coordinates
+};
+
+#define splashMaxCurveSplits (1 << 10)
+
+struct SplashXPathSeg {
+    double x0, y0;		// first endpoint
+    double x1, y1;		// second endpoint
+    double dxdy;		// slope: delta-x / delta-y
+    double dydx;		// slope: delta-y / delta-x
+    Guint flags;
+};
+#define splashXPathHoriz   0x01 // segment is vertical (y0 == y1)
+//   (dxdy is undef)
+#define splashXPathVert    0x02 // segment is horizontal (x0 == x1)
+//   (dydx is undef)
+#define splashXPathFlip	   0x04	// y0 > y1
+
+class SplashXPath {
+public:
+
+    // Expands (converts to segments) and flattens (converts curves to
+    // lines) <path>.  Transforms all points from user space to device
+    // space, via <matrix>.  If <closeSubpaths> is true, closes all open
+    // subpaths.
+    SplashXPath(SplashPath *path, double *matrix,
+                double flatness, GBool closeSubpaths,
+                GBool adjustLines = gFalse, int linePosI = 0);
+
+    // Copy an expanded path.
+    SplashXPath *copy() { return new SplashXPath(this); }
+
+    ~SplashXPath();
+
+    SplashXPath(const SplashXPath&) = delete;
+    SplashXPath& operator=(const SplashXPath&) = delete;
+
+    // Multiply all coordinates by splashAASize, in preparation for
+    // anti-aliased rendering.
+    void aaScale();
+
+    // Sort by upper coordinate (lower y), in y-major order.
+    void sort();
+    SplashXPath(SplashXPath *xPath);
+
+    int getSegLength() {return length;}
+    SplashXPathSeg* getSeg(int i) {return &segs[i];}
+
+private:
+
+    void transform(double *matrix, double xi, double yi,
+                   double *xo, double *yo);
+    void strokeAdjust(SplashXPathAdjust *adjust,
+                      double *xp, double *yp);
+    void grow(int nSegs);
+    void addCurve(double x0, double y0,
+                  double x1, double y1,
+                  double x2, double y2,
+                  double x3, double y3,
+                  double flatness,
+                  GBool first, GBool last, GBool end0, GBool end1);
+    void addSegment(double x0, double y0,
+                    double x1, double y1);
+
+    SplashXPathSeg *segs;
+    int length, size;		// length and size of segs array
+
+//    friend class SplashXPathScanner;
+//    friend class SplashClip;
+//    friend class Splash;
+};
+
 struct AtomPoint
 {
     AtomPoint(double x, double y):x(x), y(y){}
@@ -90,7 +172,7 @@ public:
 
     void conv();
     void addImage(AtomImage img);
-    void addLine(PdfShape shape);
+    void addLine(PdfPath shape);
     void setPageBoarder(double width, double height);
 private:
     double m_fontSize;		// current font size
@@ -203,7 +285,7 @@ private:
             GBool isMask=gFalse);
     bool inMarkedContent() const { return m_mcidStack.size() > 0; }
     void setFlatness(double flatness) ;
-    void getSplashXPath(SplashPath *path);
+    SplashXPath* getSplashXPath(SplashPath *path);
     // is ok? if AtomOutputDev Construct failed, it's false.
     GBool m_ok;
 
@@ -217,6 +299,7 @@ private:
     double m_matrix[6];
     double m_flatness;
 };
+
 
 
 #endif //POPPLER_ATOMOUTPUTDEV_H

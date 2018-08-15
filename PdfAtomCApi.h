@@ -58,12 +58,13 @@ struct CPdfLine {
     int y0;
     int x1;
     int y1;
-    int cx;
-    int cy;
+//    int cx;
+//    int cy;
     int type;
 };
 
 struct CPdfPath {
+    int type;
     CPdfLine* lines;
     unsigned long line_len;
 };
@@ -84,9 +85,9 @@ struct CPageInfos {
     unsigned long image_len;
     CPdfItem* items;
     unsigned long item_len;
-    CPdfShape* lines;
+    CPdfPath* lines;
     unsigned long line_len;
-    CPdfShape* graphs;
+    CPdfPath* graphs;
     unsigned long graph_len;
 };
 

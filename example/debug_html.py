@@ -3,30 +3,29 @@ import os
 sys.path.append('../')
 from pdfatom import *
 from typing import TextIO
-import jinja2
+# import jinja2
 
 
 def _render_items(items, out: TextIO, offset: float, ratio: float):
     for item in items:
         # item = items[item_idx]
         out.write(f'<div style="position:absolute;left:{item.left*ratio}px;top:{(item.top+offset)*ratio}px;'
-                  f'width:{abs(item.left-item.right)*ratio}; height: {abs(item.bottom-item.top)*ratio};'
+                  f'width:{abs(item.left-item.right)*ratio}px; height: {abs(item.bottom-item.top)*ratio}px;'
                   f'">{item.text.decode("utf-8")}</div>\n')
         _render_items(PdfIterator(item.children, item.children_len), out, offset, ratio)
 
 
-def _render_lines(lines, out: TextIO, offset: float, ratio: float):
-    for shape in lines:  # type: CPdfShape
+def _render_lines(pathes, out: TextIO, offset: float, ratio: float):
+    for path in pathes:  # type: CPdfShape
         out.write("<div></div>\n")
-        if shape.type != 2:
+        if path.type != 2:
             continue
-        for path in shape.path_list:  # type: CPdfPath
-            for line in path.line_list:  # type: CPdfLine
-                out.write(f'<div style="position:absolute;left:{min(line.x0, line.x1)*ratio}px;'
-                          f'top:{(min(line.y0, line.y1)+offset)*ratio}px;'
-                          f'width:{(abs(line.x1-line.x0)+1)*ratio}px;'
-                          f'height:{(abs(line.y1-line.y0)+1)*ratio}px;'
-                          f'border: red solid 1px"></div>\n')
+        for line in path.line_list:  # type: CPdfLine
+            out.write(f'<div style="position:absolute;left:{min(line.x0, line.x1)*ratio}px;'
+                      f'top:{(min(line.y0, line.y1)+offset)*ratio}px;'
+                      f'width:{(abs(line.x1-line.x0)+1)*ratio}px;'
+                      f'height:{(abs(line.y1-line.y0)+1)*ratio}px;'
+                      f'border: red solid 1px"></div>\n')
 
 
 def render_page_info(page_info: PageInfo, out: TextIO, offset: float=0.0, ratio: float=1.0):

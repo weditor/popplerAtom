@@ -178,6 +178,9 @@ public:
 class PdfPath {
 public:
     std::vector<PdfLine> lines;
+    int m_type;
+
+    PdfPath(int type): m_type(type) {}
 };
 
 class PdfShape {
@@ -197,8 +200,8 @@ public:
     std::vector<PdfFont> m_fonts;
     std::vector<PdfImage> m_images;
     std::vector<PdfItem> m_items;
-    std::vector<PdfShape> m_lines;
-    std::vector<PdfShape> m_graphs;
+    std::vector<PdfPath> m_lines;
+    std::vector<PdfPath> m_graphs;
 
     PageInfos(): m_page_num(0), m_width(0), m_height(0), m_item_seq(0){}
 

@@ -94,14 +94,15 @@ class CPdfLine(Structure):
         ('y0', c_int),
         ('x1', c_int),
         ('y1', c_int),
-        ('cx', c_int),
-        ('cy', c_int),
+        # ('cx', c_int),
+        # ('cy', c_int),
         ('type', c_int),
     ]
 
 
 class CPdfPath(Structure):
     _fields_ = [
+        ('type', c_int),
         ("lines", POINTER(CPdfLine)),
         ("line_len", c_ulong),
     ]
@@ -138,10 +139,10 @@ class CPageInfos(Structure):
         ("items", POINTER(CPdfItem)),
         ("item_len", c_ulong),
 
-        ("lines", POINTER(CPdfShape)),
+        ("lines", POINTER(CPdfPath)),
         ("line_len", c_ulong),
 
-        ("graphs", POINTER(CPdfShape)),
+        ("graphs", POINTER(CPdfPath)),
         ("graph_len", c_ulong),
     ]
 
@@ -254,7 +255,7 @@ if __name__ == '__main__':
     # print(parser, type(parser))
     print(isParserOk(parser))
     print(get_page_number(parser))
-    pageinfos = renderHtml(parser, 5, 1.0)
+    pageinfos = renderHtml(parser, 5, 1.8)
 
     deletePageInfos(pageinfos)
 

@@ -75,47 +75,39 @@ static void deleteItems(CPdfItem* pdfItem, size_t size) {
     delete [] pdfItem;
 }
 
-static CPdfShape* copylines(const std::vector<PdfShape> &pdfShapes) {
-    if (pdfShapes.empty()) {
+static CPdfPath* copylines(const std::vector<PdfPath> &pdfPathes) {
+    if (pdfPathes.empty()) {
         return nullptr;
     }
 
-    auto *cPdfShape = new CPdfShape[pdfShapes.size()];
-    for (unsigned long i = 0; i < pdfShapes.size(); ++i) {
-        cPdfShape[i].type = pdfShapes[i].type;
-        cPdfShape[i].path_len = pdfShapes[i].pathes.size();
-        cPdfShape[i].pathes = new CPdfPath[pdfShapes[i].pathes.size()];
+    auto *cPdfPath = new CPdfPath[pdfPathes.size()];
+    for (unsigned long i = 0; i < pdfPathes.size(); ++i) {
 
-        for (unsigned long j = 0; j < pdfShapes[i].pathes.size(); ++j) {
+//        CPdfLine &cPdfLine = pdfPathes[i].lines;
+//        const PdfPath &pdfPath = pdfPathes[i].pathes[i];
 
-            CPdfPath &cPdfPath = cPdfShape[i].pathes[j];
-            const PdfPath &pdfPath = pdfShapes[i].pathes[j];
-
-            cPdfPath.line_len = pdfShapes[i].pathes[j].lines.size();
-            cPdfPath.lines = new CPdfLine[pdfPath.lines.size()];
-            for (unsigned long k = 0; k < pdfPath.lines.size(); ++k) {
-                cPdfPath.lines[k].type = pdfPath.lines[k].type;
-                cPdfPath.lines[k].x0 = pdfPath.lines[k].x0;
-                cPdfPath.lines[k].y0 = pdfPath.lines[k].y0;
-                cPdfPath.lines[k].x1 = pdfPath.lines[k].x1;
-                cPdfPath.lines[k].y1 = pdfPath.lines[k].y1;
-                cPdfPath.lines[k].cx = pdfPath.lines[k].cx;
-                cPdfPath.lines[k].cy = pdfPath.lines[k].cy;
-            }
+        cPdfPath[i].line_len = pdfPathes[i].lines.size();
+        cPdfPath[i].lines = new CPdfLine[pdfPathes[i].lines.size()];
+        cPdfPath[i].type = pdfPathes[i].m_type;
+        for (unsigned long j = 0; j < pdfPathes[i].lines.size(); ++j) {
+            cPdfPath[i].lines[j].type = pdfPathes[i].lines[j].type;
+            cPdfPath[i].lines[j].x0 = pdfPathes[i].lines[j].x0;
+            cPdfPath[i].lines[j].y0 = pdfPathes[i].lines[j].y0;
+            cPdfPath[i].lines[j].x1 = pdfPathes[i].lines[j].x1;
+            cPdfPath[i].lines[j].y1 = pdfPathes[i].lines[j].y1;
+//            cPdfPath[i].lines[j].cx = pdfPathes[i].lines[j].cx;
+//            cPdfPath[i].lines[j].cy = pdfPathes[i].lines[j].cy;
         }
     }
-    return cPdfShape;
+    return cPdfPath;
 }
 
-static void deleteLines(CPdfShape* pdfShape, unsigned long size) {
+static void deleteLines(CPdfPath* pdfPath, unsigned long size) {
 
     for (unsigned long i = 0; i < size; ++i) {
-        for (unsigned long j = 0; j < pdfShape[i].path_len; ++j) {
-            delete [] pdfShape[i].pathes[j].lines;
-        }
-        delete [] pdfShape[i].pathes;
+        delete [] pdfPath[i].lines;
     }
-    delete [] pdfShape;
+    delete [] pdfPath;
 }
 
 CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale) {
