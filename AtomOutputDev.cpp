@@ -5,12 +5,12 @@
 #include <cmath>
 #include <iostream>
 #include <goo/PNGWriter.h>
+#include <goo/GooList.h>
 #include "AtomOutputDev.h"
 #include "GfxState.h"
 #include "GfxFont.h"
+
 #include "HtmlUtils.h"
-#include <goo/GooList.h>
-#include "HtmlFonts.h"
 
 #include "SplashOutputDev.h"
 #include "splash/SplashPath.h"
@@ -18,12 +18,11 @@
 
 #ifdef ENABLE_LIBPNG
 #include <png.h>
+#endif
+
 #include <poppler/UnicodeMap.h>
 #include <poppler/GlobalParams.h>
 #include <algorithm>
-//#include <splash/SplashMath.h>
-
-#endif
 
 
 static inline int splashRound(double x) {
@@ -31,6 +30,36 @@ static inline int splashRound(double x) {
     if (x > 0) return (int)x;
     else return (int)floor(x);
 }
+
+
+static std::string convtoX(unsigned int xcol){
+    std::string xret;
+    char tmp;
+    unsigned  int k;
+    k = (xcol/16);
+    if (k<10) tmp=(char) ('0'+k); else tmp=(char)('a'+k-10);
+    xret.push_back(tmp);
+    k = (xcol%16);
+    if (k<10) tmp=(char) ('0'+k); else tmp=(char)('a'+k-10);
+    xret.push_back(tmp);
+    return xret;
+}
+
+static std::string color2string(GfxRGB rgb) {
+    std::string result("#");
+    unsigned int r=static_cast<unsigned int>(rgb.r/65535.0*255.0);
+    unsigned int g=static_cast<unsigned int>(rgb.g/65535.0*255.0);
+    unsigned int b=static_cast<unsigned int>(rgb.b/65535.0*255.0);
+    if (r > 255 || g > 255 || b > 255) {
+        if (!globalParams->getErrQuiet()) fprintf(stderr, "Error : Bad color (%d,%d,%d) reset to (0,0,0)\n", r, g, b);
+        r=0;g=0;b=0;
+    }
+    result.append(convtoX(r));
+    result.append(convtoX(g));
+    result.append(convtoX(b));
+    return result;
+}
+
 
 // todo: 重叠的文字.
 // todo: 字体的render
@@ -66,13 +95,123 @@ AtomImage::AtomImage(GfxState *state) {
 }
 
 
+
+AtomFont::AtomFont(GfxFont *font, int _size, std::string color, int render){
+    this->color = color;
+    fontName = defaultFont;
+    if (font->getName()) {
+        fontName = font->getName()->toStr();
+    }
+
+    size = (unsigned int)(_size);
+    italic = gFalse;
+    bold = gFalse;
+    rotOrSkewed = gFalse;
+    weight = font->getWeight()*100;
+    type = font->getType();
+    this->render = static_cast<unsigned int>(render);
+
+    auto *fontname = new GooString(fontName.c_str());
+    if (font->isBold() || font->getWeight() >= GfxFont::W700 || strstr(fontname->lowerCase()->getCString(),"bold")) {
+        bold=gTrue;
+    }
+
+    if (font->isItalic()
+        || strstr(fontname->lowerCase()->getCString(),"italic")
+        || strstr(fontname->lowerCase()->getCString(),"oblique")) {
+        italic=gTrue;
+    }
+
+    rotSkewMat[0] = rotSkewMat[1] = rotSkewMat[2] = rotSkewMat[3] = 0;
+    delete fontname;
+}
+
+
+const std::string AtomFont::defaultFont = "Times";
+
+AtomFont::AtomFont(const AtomFont& x){
+    size=x.size;
+    italic=x.italic;
+    bold=x.bold;
+    color=x.color;
+    fontName=x.fontName;
+    type=x.type;
+    weight=x.weight;
+    render=x.render;
+    rotOrSkewed = x.rotOrSkewed;
+    memcpy(rotSkewMat, x.rotSkewMat, sizeof(rotSkewMat));
+}
+
+
+AtomFont::~AtomFont(){
+}
+
+AtomFont& AtomFont::operator=(const AtomFont& x){
+    if (this==&x) {
+        return *this;
+    }
+    size=x.size;
+    italic=x.italic;
+    bold=x.bold;
+    color=x.color;
+    fontName=x.fontName;
+    type=x.type;
+    weight=x.weight;
+    render=x.render;
+    rotOrSkewed = x.rotOrSkewed;
+    memcpy(rotSkewMat, x.rotSkewMat, sizeof(rotSkewMat));
+    return *this;
+}
+
+/*
+  This function is used to compare font uniquely for insertion into
+  the list of all encountered fonts
+*/
+GBool AtomFont::isEqual(const AtomFont& x) const{
+    return (size == x.size) &&
+           (bold == x.bold) &&
+           (italic == x.italic) &&
+           (color == x.getColor()) &&
+           (type == x.type) &&
+           weight == x.weight &&
+           render == x.render &&
+           isRotOrSkewed() == x.isRotOrSkewed() &&
+           (!isRotOrSkewed() || rot_matrices_equal(getRotMat(), x.getRotMat()));
+}
+
+const std::string& AtomFont::getFontName() const{
+    return fontName;
+}
+
+AtomFontManager::AtomFontManager(){
+//    m_fonts=std::vector<HtmlFont>;
+}
+
+AtomFontManager::~AtomFontManager(){
+//    if (m_fonts) delete m_fonts;
+}
+
+unsigned long AtomFontManager::AddFont(const AtomFont& font){
+    std::vector<AtomFont>::iterator i;
+    for (i=m_fonts.begin();i!=m_fonts.end();++i)
+    {
+        if (font.isEqual(*i))
+        {
+            return (int)(i-(m_fonts.begin()));
+        }
+    }
+
+    m_fonts.push_back(font);
+    return (m_fonts.size()-1);
+}
+
 //////////////////////
 /// AtomPage
 //////////////////////
 
 AtomPage::AtomPage() {
     m_fontSize = 0;		// current font size
-    m_fonts = new HtmlFontAccu();
+    m_fonts = new AtomFontManager();
     m_lineList = new GooList();
     m_lastBoxId = -1;
 }
@@ -171,7 +310,7 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
         GfxRGB rgb;
         state->getFillRGB(&rgb);
         // todo: 增加render, type.
-        HtmlFont hfont = HtmlFont(font, static_cast<int>(state->getFontSize()), rgb);
+        AtomFont hfont = AtomFont(font, static_cast<int>(state->getFontSize()), color2string(rgb), state->getRender());
         if (isMatRotOrSkew(state->getTextMat())) {
             double normalizedMatrix[4];
             memcpy(normalizedMatrix, state->getTextMat(), sizeof(normalizedMatrix));
@@ -180,6 +319,7 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
             normalizeRotMat(normalizedMatrix);
             hfont.setRotMat(normalizedMatrix);
         }
+
         fontpos = m_fonts->AddFont(hfont);
     }
     double ascent = 1;
@@ -235,12 +375,10 @@ void AtomPage::dump(unsigned int pageNum, PageInfos &pageInfos) {
     for (int i = 0; i < m_fonts->size(); ++i) {
         // todo: add render, type, weight
         auto font = m_fonts->Get(0);
-        GooString *color = font->getColor().toString();
-        GooString *fontName = font->getFullName();
-        PdfFont pdfFont(i, fontName->getCString(), 1, font->getSize(), 100, color->getCString(),
-                font->isBold(), font->isItalic(), font->getLineSize(), 0);
-        delete(fontName);
-        delete(color);
+        const std::string &color = font->getColor();
+        const std::string &fontName = font->getFontName();
+        PdfFont pdfFont(i, fontName, font->getType(), font->getSize(), font->getWeight(), color,
+                font->isBold(), font->isItalic(), -1, font->getRender());
         pageInfos.m_fonts.push_back(pdfFont);
     }
     pageInfos.m_page_num = pageNum;

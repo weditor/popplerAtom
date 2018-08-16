@@ -11,11 +11,12 @@
 
 
 class Page;
-class HtmlFontAccu;
+class AtomFontManager;
 class GfxPath;
 class GooList;
 class GooString;
 class SplashPath;
+class GfxFont;
 
 
 GooString* textFilter(const Unicode* u, int uLen);
@@ -97,11 +98,8 @@ private:
 
     SplashXPathSeg *segs;
     int length, size;		// length and size of segs array
-
-//    friend class SplashXPathScanner;
-//    friend class SplashClip;
-//    friend class Splash;
 };
+
 
 struct AtomPoint
 {
@@ -133,6 +131,59 @@ public:
 
     double xMin, xMax;		// image x coordinates
     double yMin, yMax;		// image y coordinates
+};
+
+
+class AtomFont{
+private:
+    unsigned int size;
+    bool italic;
+    bool bold;
+    bool rotOrSkewed;
+    std::string fontName;
+    std::string color;
+    short weight;
+    unsigned int type;
+    unsigned int render;
+    double rotSkewMat[4]; // only four values needed for rotation and skew
+
+public:
+
+    AtomFont(GfxFont *font,int _size, std::string color, int render);
+    AtomFont(const AtomFont& x);
+    AtomFont& operator=(const AtomFont& x);
+    const std::string& getColor() const {return color;}
+    ~AtomFont();
+    GBool isItalic() const {return italic;}
+    GBool isBold() const {return bold;}
+    GBool isRotOrSkewed() const { return rotOrSkewed; }
+    unsigned int getSize() const {return size;}
+    unsigned int getType() const {return type;}
+    short getWeight() const {return weight;}
+    unsigned int getRender() const {return render;}
+    void setRotMat(const double * const mat) { rotOrSkewed = gTrue; memcpy(rotSkewMat, mat, sizeof(rotSkewMat)); }
+    const double *getRotMat() const { return rotSkewMat; }
+    const std::string& getFontName() const;
+    GBool isEqual(const AtomFont& x) const;
+
+    static const std::string defaultFont;
+};
+
+class AtomFontManager{
+private:
+    std::vector<AtomFont> m_fonts;
+
+public:
+    AtomFontManager();
+    ~AtomFontManager();
+    AtomFontManager(const AtomFontManager &) = delete;
+    AtomFontManager& operator=(const AtomFontManager &) = delete;
+    unsigned long AddFont(const AtomFont& font);
+    AtomFont *Get(int i){
+        return &(m_fonts[i]);
+    }
+    int size() const {return m_fonts.size();}
+
 };
 
 
@@ -177,7 +228,7 @@ public:
 private:
     double m_fontSize;		// current font size
 
-    HtmlFontAccu *m_fonts;
+    AtomFontManager *m_fonts;
     GooList *m_imgList;
     GooList *m_lineList;
 
