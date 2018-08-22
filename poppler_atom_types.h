@@ -132,15 +132,16 @@ public:
         this->bottom = bottom;
         this->font = font;
         this->style = style;
-
-//        children = new std::vector<PdfItem>;
     }
     PdfItem(): mcid(-1), type(TEXT), left(-1), top(-1), right(-1), bottom(-1), font(-1), style(-1) {
-//        children = new std::vector<PdfItem>;
+
     }
-    ~PdfItem(){
-//        delete((std::vector<PdfItem>*)children);
-    }
+    ~PdfItem(){}
+
+    int width() const {return std::abs(right-left);}
+    int height() const {return std::abs(bottom-top);}
+    int xcenter() const {return (right+left)/2;}
+    int ycenter() const {return (top+bottom)/2;}
 };
 
 

@@ -10,10 +10,9 @@
 #include "GfxState.h"
 #include "GfxFont.h"
 
-#include "HtmlUtils.h"
-
-#include "SplashOutputDev.h"
-#include "splash/SplashPath.h"
+// todo: remove Splash_XXX.
+//#include "SplashOutputDev.h"
+//#include "splash/AtomPath.h"
 
 
 #ifdef ENABLE_LIBPNG
@@ -27,8 +26,34 @@
 
 static inline int splashRound(double x) {
     x = x+0.5;
-    if (x > 0) return (int)x;
-    else return (int)floor(x);
+    if (x > 0) {
+        return (int)x;
+    }
+    else {
+        return (int)floor(x);
+    }
+}
+
+static inline GBool is_within(double a, double thresh, double b) {
+    return fabs(a-b) < thresh;
+}
+
+static inline GBool rot_matrices_equal(const double * const mat0, const double * const mat1) {
+    return is_within(mat0[0], .1, mat1[0]) && is_within(mat0[1], .1, mat1[1]) &&
+           is_within(mat0[2], .1, mat1[2]) && is_within(mat0[3], .1, mat1[3]);
+}
+
+// rotation is (cos q, sin q, -sin q, cos q, 0, 0)
+// sin q is zero iff there is no rotation, or 180 deg. rotation;
+// for 180 rotation, cos q will be negative
+static inline GBool isMatRotOrSkew(const double * const mat) {
+    return mat[0] < 0 || !is_within(mat[1], .1, 0);
+}
+
+static inline void normalizeRotMat(double *mat) {
+    double scale = fabs(mat[0] + mat[1]);
+    if (!scale) return;
+    for (int i = 0; i < 4; i++) mat[i] /= scale;
 }
 
 
@@ -47,9 +72,9 @@ static std::string convtoX(unsigned int xcol){
 
 static std::string color2string(GfxRGB rgb) {
     std::string result("#");
-    unsigned int r=static_cast<unsigned int>(rgb.r/65535.0*255.0);
-    unsigned int g=static_cast<unsigned int>(rgb.g/65535.0*255.0);
-    unsigned int b=static_cast<unsigned int>(rgb.b/65535.0*255.0);
+    auto r=static_cast<unsigned int>(rgb.r/65535.0*255.0);
+    auto g=static_cast<unsigned int>(rgb.g/65535.0*255.0);
+    auto b=static_cast<unsigned int>(rgb.b/65535.0*255.0);
     if (r > 255 || g > 255 || b > 255) {
         if (!globalParams->getErrQuiet()) fprintf(stderr, "Error : Bad color (%d,%d,%d) reset to (0,0,0)\n", r, g, b);
         r=0;g=0;b=0;
@@ -61,8 +86,6 @@ static std::string color2string(GfxRGB rgb) {
 }
 
 
-// todo: 重叠的文字.
-// todo: 字体的render
 GooString* textFilter(const Unicode* u, int uLen) {
     auto *tmp = new GooString();
     UnicodeMap *uMap;
@@ -240,9 +263,9 @@ void AtomPage::updateFont(GfxState *state) {
     int code;
     double w;
 
-    // todo: update font here
     // adjust the font size
     m_fontSize = state->getTransformedFontSize();
+    std::cout<<"UpdateFont"<<std::endl;
     if ((font = state->getFont()) && font->getType() == fontType3) {
         // This is a hack which makes it possible to deal with some Type 3
         // fonts.  The problem is that it's impossible to know what the
@@ -309,7 +332,6 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
     if(font) {
         GfxRGB rgb;
         state->getFillRGB(&rgb);
-        // todo: 增加render, type.
         AtomFont hfont = AtomFont(font, static_cast<int>(state->getFontSize()), color2string(rgb), state->getRender());
         if (isMatRotOrSkew(state->getTextMat())) {
             double normalizedMatrix[4];
@@ -321,6 +343,7 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
         }
 
         fontpos = m_fonts->AddFont(hfont);
+        std::cout<<"fontpos:"<<fontpos<<std::endl;
     }
     double ascent = 1;
     double descent = 0;
@@ -343,6 +366,14 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
     for (int i = 0; i < uLen; ++i) {
         GooString *s = textFilter (u+i, 1);
         PdfItem item(mcid, TEXT, s->getCString(), x1 + i*w1, yMin, x1 + (i+1)*w1, yMax, fontpos);
+        const PdfItem &lastItem = m_pageInfos.m_items.back();
+        // text overlap
+        if (std::abs(lastItem.xcenter()- item.xcenter()) < (lastItem.width()+item.width())*0.2
+            && std::abs(lastItem.ycenter()- item.ycenter()) < (lastItem.height()+item.height())*0.2)
+        {
+            delete s;
+            continue;
+        }
         m_pageInfos.addItem(item, m_lastBoxId);
         delete s;
     }
@@ -367,13 +398,11 @@ void AtomPage::setPageBoarder(const double width, const double height){
 }
 
 void AtomPage::coalesce() {
-    // todo: duplicated word
 }
 
 void AtomPage::dump(unsigned int pageNum, PageInfos &pageInfos) {
     pageInfos = m_pageInfos;
     for (int i = 0; i < m_fonts->size(); ++i) {
-        // todo: add render, type, weight
         auto font = m_fonts->Get(0);
         const std::string &color = font->getColor();
         const std::string &fontName = font->getFontName();
@@ -643,8 +672,8 @@ void AtomOutputDev::fill(GfxState *state) {
     if (state->getFillColorSpace()->isNonMarking()) {
         return;
     }
-    SplashPath *path = convertPath(state, state->getPath(), gTrue);
-    SplashXPath *xpath = getSplashXPath(path);
+    AtomPath *path = convertPath(state, state->getPath(), gTrue);
+    AtomXPath *xpath = getSplashXPath(path);
 
     PdfPath pdfPath(1);
     for (int i = 0; i < xpath->getSegLength(); ++i) {
@@ -661,9 +690,8 @@ void AtomOutputDev::eoFill(GfxState *state) {
     if (state->getFillColorSpace()->isNonMarking()) {
         return;
     }
-    // todo: complete it.
-    SplashPath *path = convertPath(state, state->getPath(), gTrue);
-    SplashXPath *xpath = getSplashXPath(path);
+    AtomPath *path = convertPath(state, state->getPath(), gTrue);
+    AtomXPath *xpath = getSplashXPath(path);
 
     PdfPath pdfPath(2);
     for (int i = 0; i < xpath->getSegLength(); ++i) {
@@ -707,83 +735,39 @@ void AtomOutputDev::endMarkedContent(GfxState * state){
     }
 }
 
-
-void AtomOutputDev::convertPath2(GfxState *state, GfxPath *path, GBool dropEmptySubpaths, int type) {
-    const int n = dropEmptySubpaths ? 1 : 0;
-//    PdfShape shape(type);
-//    const int width = m_pages->m_pageInfos.m_width;
-    const double height = m_pages->m_pageBox.y2 - m_pages->m_pageBox.y1;
-    for (int i = 0; i < path->getNumSubpaths(); ++i) {
-        GfxSubpath *subpath = path->getSubpath(i);
-        if (subpath->getNumPoints() <= n) {
-            continue;
-        }
-        PdfPath pdfPath(type);
-        double lastX=subpath->getX(0), lastY=height-subpath->getY(0);
-        int j = 1;
-        while (j < subpath->getNumPoints()) {
-            if (subpath->getCurve(j)) {
-                // 绘制圆弧
-                PdfLine pdfLine(
-                    subpath->getX(j), height-subpath->getY(j),
-                    subpath->getX(j + 1), height-subpath->getY(j + 1),
-                    subpath->getX(j + 2), height-subpath->getY(j + 2)
-                );
-                pdfPath.lines.push_back(pdfLine);
-                lastX = subpath->getX(j + 2);
-                lastY = height-subpath->getY(j + 2);
-                j += 3;
-            } else {
-                // 绘制直线.
-                PdfLine pdfLine(
-                    lastX, lastY,
-                    subpath->getX(j), height-subpath->getY(j)
-                );
-                pdfPath.lines.push_back(pdfLine);
-                lastX = subpath->getX(j);
-                lastY = height-subpath->getY(j);
-                ++j;
-            }
-        }
-//        shape.pathes.push_back(pdfPath);
-    }
-//    m_pages->addLine(shape);
-}
-
 void AtomOutputDev::getInfo(unsigned int pageNum, PageInfos &pageInfos) {
     m_pages->dump(pageNum, pageInfos);
 }
 
-SplashPath *AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubpaths) {
-    SplashPath *sPath;
-    GfxSubpath *subpath;
-    int n, i, j;
+AtomPath *AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubPaths) {
+    AtomPath *sPath;
+    int i, j;
 
-    n = dropEmptySubpaths ? 1 : 0;
-    sPath = new SplashPath();
+    const int n = dropEmptySubPaths ? 1 : 0;
+    sPath = new AtomPath();
     for (i = 0; i < path->getNumSubpaths(); ++i) {
-        subpath = path->getSubpath(i);
-        if (subpath->getNumPoints() > n) {
-            sPath->reserve(subpath->getNumPoints() + 1);
-            sPath->moveTo((double)subpath->getX(0),
-                          (double)subpath->getY(0));
+        GfxSubpath *subPath = path->getSubpath(i);
+        if (subPath->getNumPoints() > n) {
+            sPath->reserve(subPath->getNumPoints() + 1);
+            sPath->moveTo(subPath->getX(0),
+                          subPath->getY(0));
             j = 1;
-            while (j < subpath->getNumPoints()) {
-                if (subpath->getCurve(j)) {
-                    sPath->curveTo((double)subpath->getX(j),
-                                   (double)subpath->getY(j),
-                                   (double)subpath->getX(j+1),
-                                   (double)subpath->getY(j+1),
-                                   (double)subpath->getX(j+2),
-                                   (double)subpath->getY(j+2));
+            while (j < subPath->getNumPoints()) {
+                if (subPath->getCurve(j)) {
+                    sPath->curveTo(subPath->getX(j),
+                                   subPath->getY(j),
+                                   subPath->getX(j+1),
+                                   subPath->getY(j+1),
+                                   subPath->getX(j+2),
+                                   subPath->getY(j+2));
                     j += 3;
                 } else {
-                    sPath->lineTo((double)subpath->getX(j),
-                                  (double)subpath->getY(j));
+                    sPath->lineTo(subPath->getX(j),
+                                  subPath->getY(j));
                     ++j;
                 }
             }
-            if (subpath->isClosed()) {
+            if (subPath->isClosed()) {
                 sPath->close();
             }
         }
@@ -807,21 +791,21 @@ void AtomOutputDev::setFlatness(const double flatness) {
 }
 
 
-SplashXPath* AtomOutputDev::getSplashXPath(SplashPath *path) {
+AtomXPath* AtomOutputDev::getSplashXPath(AtomPath *path) {
     GBool adjustLine = gFalse;
     int linePosI = 0;
-    return new SplashXPath(path, m_matrix, m_flatness, gTrue,
+    return new AtomXPath(path, m_matrix, m_flatness, gTrue,
                             adjustLine, linePosI);
 }
 
 
 
 //------------------------------------------------------------------------
-// SplashXPath
+// AtomXPath
 //------------------------------------------------------------------------
 
 // Transform a point from user space to device space.
-inline void SplashXPath::transform(double *matrix,
+inline void AtomXPath::transform(double *matrix,
                                    double xi, double yi,
                                    double *xo, double *yo) {
     //                          [ m[0] m[1] 0 ]
@@ -831,25 +815,25 @@ inline void SplashXPath::transform(double *matrix,
     *yo = xi * matrix[1] + yi * matrix[3] + matrix[5];
 }
 
-SplashXPath::SplashXPath(SplashPath *path, double *matrix,
+AtomXPath::AtomXPath(AtomPath *path, double *matrix,
                          double flatness, GBool closeSubpaths,
                          GBool adjustLines, int linePosI) {
-    SplashPathHint *hint;
-    SplashXPathPoint *pts;
-    SplashXPathAdjust *adjusts, *adjust;
+    AtomPathHint *hint;
+    AtomXPathPoint *pts;
+    AtomXPathAdjust *adjusts, *adjust;
     double x0, y0, x1, y1, x2, y2, x3, y3, xsp, ysp;
     double adj0, adj1;
     int curSubpath, i, j;
 
     // transform the points
-    pts = (SplashXPathPoint *)gmallocn(path->length, sizeof(SplashXPathPoint));
+    pts = (AtomXPathPoint *)gmallocn(path->length, sizeof(AtomXPathPoint));
     for (i = 0; i < path->length; ++i) {
         transform(matrix, path->pts[i].x, path->pts[i].y, &pts[i].x, &pts[i].y);
     }
 
     // set up the stroke adjustment hints
     if (path->hints) {
-        adjusts = (SplashXPathAdjust *) gmallocn(path->hintsLength, sizeof(SplashXPathAdjust));
+        adjusts = (AtomXPathAdjust *) gmallocn(path->hintsLength, sizeof(AtomXPathAdjust));
         for (i = 0; i < path->hintsLength; ++i) {
             hint = &path->hints[i];
             if (hint->ctrl0 + 1 >= path->length || hint->ctrl1 + 1 >= path->length) {
@@ -994,7 +978,7 @@ SplashXPath::SplashXPath(SplashPath *path, double *matrix,
 }
 
 // Apply the stroke adjust hints to point <pt>: (*<xp>, *<yp>).
-void SplashXPath::strokeAdjust(SplashXPathAdjust *adjust,
+void AtomXPath::strokeAdjust(AtomXPathAdjust *adjust,
                                double *xp, double *yp) {
     double x, y;
 
@@ -1019,19 +1003,19 @@ void SplashXPath::strokeAdjust(SplashXPathAdjust *adjust,
     }
 }
 
-SplashXPath::SplashXPath(SplashXPath *xPath) {
+AtomXPath::AtomXPath(AtomXPath *xPath) {
     length = xPath->length;
     size = xPath->size;
     segs = (SplashXPathSeg *)gmallocn(size, sizeof(SplashXPathSeg));
     memcpy(segs, xPath->segs, length * sizeof(SplashXPathSeg));
 }
 
-SplashXPath::~SplashXPath() {
+AtomXPath::~AtomXPath() {
     gfree(segs);
 }
 
 // Add space for <nSegs> more segments
-void SplashXPath::grow(int nSegs) {
+void AtomXPath::grow(int nSegs) {
     if (length + nSegs > size) {
         if (size == 0) {
             size = 32;
@@ -1043,7 +1027,7 @@ void SplashXPath::grow(int nSegs) {
     }
 }
 
-void SplashXPath::addCurve(double x0, double y0,
+void AtomXPath::addCurve(double x0, double y0,
                            double x1, double y1,
                            double x2, double y2,
                            double x3, double y3,
@@ -1161,7 +1145,7 @@ void SplashXPath::addCurve(double x0, double y0,
     delete [] cNext;
 }
 
-void SplashXPath::addSegment(double x0, double y0,
+void AtomXPath::addSegment(double x0, double y0,
                              double x1, double y1) {
     grow(1);
     segs[length].x0 = x0;
@@ -1223,20 +1207,182 @@ struct cmpXPathSegsFunctor {
     }
 };
 
-void SplashXPath::aaScale() {
-    // kangjuchi
-    SplashXPathSeg *seg;
-    int i;
+void AtomXPath::sort() {
+    std::sort(segs, segs + length, cmpXPathSegsFunctor());
+}
 
-    for (i = 0, seg = segs; i < length; ++i, ++seg) {
-        seg->x0 *= splashAASize;
-        seg->y0 *= splashAASize;
-        seg->x1 *= splashAASize;
-        seg->y1 *= splashAASize;
+
+
+//------------------------------------------------------------------------
+// AtomPath
+//------------------------------------------------------------------------
+
+// A path can be in three possible states:
+//
+// 1. no current point -- zero or more finished subpaths
+//    [curSubpath == length]
+//
+// 2. one point in subpath
+//    [curSubpath == length - 1]
+//
+// 3. open subpath with two or more points
+//    [curSubpath < length - 1]
+
+AtomPath::AtomPath() {
+    pts = nullptr;
+    flags = nullptr;
+    length = size = 0;
+    curSubpath = 0;
+    hints = nullptr;
+    hintsLength = hintsSize = 0;
+}
+
+AtomPath::AtomPath(AtomPath *path) {
+    length = path->length;
+    size = path->size;
+    pts = (AtomPathPoint *)gmallocn(size, sizeof(AtomPathPoint));
+    flags = (Guchar *)gmallocn(size, sizeof(Guchar));
+    memcpy(pts, path->pts, length * sizeof(AtomPathPoint));
+    memcpy(flags, path->flags, length * sizeof(Guchar));
+    curSubpath = path->curSubpath;
+    if (path->hints) {
+        hintsLength = hintsSize = path->hintsLength;
+        hints = (AtomPathHint *)gmallocn(hintsSize, sizeof(AtomPathHint));
+        memcpy(hints, path->hints, hintsLength * sizeof(AtomPathHint));
+    } else {
+        hints = nullptr;
     }
 }
 
-void SplashXPath::sort() {
-    std::sort(segs, segs + length, cmpXPathSegsFunctor());
+AtomPath::~AtomPath() {
+    gfree(pts);
+    gfree(flags);
+    gfree(hints);
+}
+
+void  AtomPath::reserve(int nPts) {
+    grow(nPts - size);
+}
+
+// Add space for <nPts> more points.
+void AtomPath::grow(int nPts) {
+    if (length + nPts > size) {
+        if (size == 0) {
+            size = 32;
+        }
+        while (size < length + nPts) {
+            size *= 2;
+        }
+        pts = (AtomPathPoint *)greallocn(pts, size, sizeof(AtomPathPoint));
+        flags = (Guchar *)greallocn(flags, size, sizeof(Guchar));
+    }
+}
+
+void AtomPath::append(AtomPath *path) {
+    int i;
+
+    curSubpath = length + path->curSubpath;
+    grow(path->length);
+    for (i = 0; i < path->length; ++i) {
+        pts[length] = path->pts[i];
+        flags[length] = path->flags[i];
+        ++length;
+    }
+}
+
+int AtomPath::moveTo(double x, double y) {
+    if (onePointSubpath()) {
+        return splashErrBogusPath;
+    }
+    grow(1);
+    pts[length].x = x;
+    pts[length].y = y;
+    flags[length] = splashPathFirst | splashPathLast;
+    curSubpath = length++;
+    return splashOk;
+}
+
+int AtomPath::lineTo(double x, double y) {
+    if (noCurrentPoint()) {
+        return splashErrNoCurPt;
+    }
+    flags[length-1] &= ~splashPathLast;
+    grow(1);
+    pts[length].x = x;
+    pts[length].y = y;
+    flags[length] = splashPathLast;
+    ++length;
+    return splashOk;
+}
+
+int AtomPath::curveTo(double x1, double y1,
+                                double x2, double y2,
+                                double x3, double y3) {
+    if (noCurrentPoint()) {
+        return splashErrNoCurPt;
+    }
+    flags[length-1] &= ~splashPathLast;
+    grow(3);
+    pts[length].x = x1;
+    pts[length].y = y1;
+    flags[length] = splashPathCurve;
+    ++length;
+    pts[length].x = x2;
+    pts[length].y = y2;
+    flags[length] = splashPathCurve;
+    ++length;
+    pts[length].x = x3;
+    pts[length].y = y3;
+    flags[length] = splashPathLast;
+    ++length;
+    return splashOk;
+}
+
+int AtomPath::close(GBool force) {
+    if (noCurrentPoint()) {
+        return splashErrNoCurPt;
+    }
+    if (force ||
+        curSubpath == length - 1 ||
+        pts[length - 1].x != pts[curSubpath].x ||
+        pts[length - 1].y != pts[curSubpath].y) {
+        lineTo(pts[curSubpath].x, pts[curSubpath].y);
+    }
+    flags[curSubpath] |= splashPathClosed;
+    flags[length - 1] |= splashPathClosed;
+    curSubpath = length;
+    return splashOk;
+}
+
+void AtomPath::addStrokeAdjustHint(int ctrl0, int ctrl1,
+                                     int firstPt, int lastPt) {
+    if (hintsLength == hintsSize) {
+        hintsSize = hintsLength ? 2 * hintsLength : 8;
+        hints = (AtomPathHint *)greallocn(hints, hintsSize,
+                                            sizeof(AtomPathHint));
+    }
+    hints[hintsLength].ctrl0 = ctrl0;
+    hints[hintsLength].ctrl1 = ctrl1;
+    hints[hintsLength].firstPt = firstPt;
+    hints[hintsLength].lastPt = lastPt;
+    ++hintsLength;
+}
+
+void AtomPath::offset(double dx, double dy) {
+    int i;
+
+    for (i = 0; i < length; ++i) {
+        pts[i].x += dx;
+        pts[i].y += dy;
+    }
+}
+
+GBool AtomPath::getCurPt(double *x, double *y) {
+    if (noCurrentPoint()) {
+        return gFalse;
+    }
+    *x = pts[length - 1].x;
+    *y = pts[length - 1].y;
+    return gTrue;
 }
 
