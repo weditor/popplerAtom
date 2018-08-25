@@ -394,7 +394,6 @@ public:
 
     // Does this device use drawChar() or drawString()?
     GBool useDrawChar() override { return gTrue; }
-
     // Does this device use beginType3Char/endType3Char?  Otherwise,
     // text in Type 3 fonts will be drawn with drawChar/drawString.
     GBool interpretType3Chars() override { return gFalse; }

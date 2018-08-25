@@ -218,6 +218,16 @@ public:
             return m_items[parent].children.size();
         }
     }
+
+    const PdfItem * getLastItem(int parent=-1) const {
+        if(parent < 0) {
+            return m_items.empty()?nullptr:&m_items.back();
+        }
+        else
+        {
+            return m_items[parent].children.empty()?nullptr:&m_items[parent].children.back();
+        }
+    }
 private:
     unsigned int m_item_seq;
 };

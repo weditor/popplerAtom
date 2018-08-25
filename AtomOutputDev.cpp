@@ -265,7 +265,6 @@ void AtomPage::updateFont(GfxState *state) {
 
     // adjust the font size
     m_fontSize = state->getTransformedFontSize();
-    std::cout<<"UpdateFont"<<std::endl;
     if ((font = state->getFont()) && font->getType() == fontType3) {
         // This is a hack which makes it possible to deal with some Type 3
         // fonts.  The problem is that it's impossible to know what the
@@ -343,7 +342,6 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
         }
 
         fontpos = m_fonts->AddFont(hfont);
-        std::cout<<"fontpos:"<<fontpos<<std::endl;
     }
     double ascent = 1;
     double descent = 0;
@@ -365,17 +363,19 @@ void AtomPage::addChar(GfxState *state, double x, double y, double dx, double dy
 
     for (int i = 0; i < uLen; ++i) {
         GooString *s = textFilter (u+i, 1);
+//        std::cout<<s->getCString()<<std::endl;
         PdfItem item(mcid, TEXT, s->getCString(), x1 + i*w1, yMin, x1 + (i+1)*w1, yMax, fontpos);
-        const PdfItem &lastItem = m_pageInfos.m_items.back();
+        delete s;
+        s = nullptr;
+        const PdfItem *lastItem = m_pageInfos.getLastItem(m_lastBoxId);
+
         // text overlap
-        if (std::abs(lastItem.xcenter()- item.xcenter()) < (lastItem.width()+item.width())*0.2
-            && std::abs(lastItem.ycenter()- item.ycenter()) < (lastItem.height()+item.height())*0.2)
+        if (lastItem && lastItem->type == item.type && std::abs(lastItem->xcenter()- item.xcenter()) < (lastItem->width()+item.width())*0.2
+            && std::abs(lastItem->ycenter()- item.ycenter()) < (lastItem->height()+item.height())*0.2)
         {
-            delete s;
             continue;
         }
         m_pageInfos.addItem(item, m_lastBoxId);
-        delete s;
     }
 }
 
