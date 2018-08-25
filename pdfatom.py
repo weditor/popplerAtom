@@ -222,6 +222,10 @@ class PageInfo:
     def lines(self):
         return PdfIterator(self.page_info.lines, self.page_info.line_len)
 
+    @property
+    def graphs(self):
+        return PdfIterator(self.page_info.graphs, self.page_info.graph_len)
+
     def __del__(self):
         deletePageInfos(pointer(self.page_info))
 

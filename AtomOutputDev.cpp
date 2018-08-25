@@ -391,7 +391,6 @@ void AtomPage::addImage(AtomImage img) {
 
 void AtomPage::addLine(PdfPath shape) {
     if (shape.isLine()) {
-//    if (true) {
         int xMin=INT_MAX, yMin=INT_MAX, xMax=INT_MIN, yMax=INT_MIN;
         for(auto line: shape.lines) {
             xMin = std::min(xMin, std::min(line.x0, line.x1));
