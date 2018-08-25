@@ -173,6 +173,9 @@ public:
         : x0(x0), y0(y0), x1(x1), y1(y1), cx(cx), cy(cy), type(1){}
     PdfLine()
         : x0(-1), y0(-1), x1(-1), y1(-1), cx(-1), cy(-1), type(-1){}
+
+    int width() const {return std::abs(x1-x0);}
+    int height() const {return std::abs(y1-y0);}
 };
 
 
@@ -182,6 +185,32 @@ public:
     int m_type;
 
     PdfPath(int type): m_type(type) {}
+
+    // shape is a line?
+    bool isLine() {
+        if (lines.size() != 4) {
+            return false;
+        }
+        bool noWidth = true;
+        for (auto &line : lines) {
+            if (line.width() > 1) {
+                noWidth = false;
+            }
+        }
+        if (noWidth) {
+            return true;
+        }
+        bool noHeight = true;
+        for (auto &line : lines) {
+            if (line.height() > 1) {
+                noHeight = false;
+            }
+        }
+        if (noHeight) {
+            return true;
+        }
+        return false;
+    }
 };
 
 class PdfShape {
@@ -201,7 +230,7 @@ public:
     std::vector<PdfFont> m_fonts;
     std::vector<PdfImage> m_images;
     std::vector<PdfItem> m_items;
-    std::vector<PdfPath> m_lines;
+    std::vector<PdfLine> m_lines;
     std::vector<PdfPath> m_graphs;
 
     PageInfos(): m_page_num(0), m_width(0), m_height(0), m_item_seq(0){}

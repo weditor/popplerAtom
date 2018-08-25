@@ -139,7 +139,7 @@ class CPageInfos(Structure):
         ("items", POINTER(CPdfItem)),
         ("item_len", c_ulong),
 
-        ("lines", POINTER(CPdfPath)),
+        ("lines", POINTER(CPdfLine)),
         ("line_len", c_ulong),
 
         ("graphs", POINTER(CPdfPath)),

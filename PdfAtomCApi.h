@@ -85,7 +85,7 @@ struct CPageInfos {
     unsigned long image_len;
     CPdfItem* items;
     unsigned long item_len;
-    CPdfPath* lines;
+    CPdfLine* lines;
     unsigned long line_len;
     CPdfPath* graphs;
     unsigned long graph_len;

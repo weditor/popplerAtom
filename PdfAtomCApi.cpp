@@ -75,7 +75,7 @@ static void deleteItems(CPdfItem* pdfItem, size_t size) {
     delete [] pdfItem;
 }
 
-static CPdfPath* copylines(const std::vector<PdfPath> &pdfPathes) {
+static CPdfPath* copyGraphs(const std::vector<PdfPath> &pdfPathes) {
     if (pdfPathes.empty()) {
         return nullptr;
     }
@@ -102,7 +102,7 @@ static CPdfPath* copylines(const std::vector<PdfPath> &pdfPathes) {
     return cPdfPath;
 }
 
-static void deleteLines(CPdfPath* pdfPath, unsigned long size) {
+static void deleteGraphs(CPdfPath *pdfPath, unsigned long size) {
 
     for (unsigned long i = 0; i < size; ++i) {
         delete [] pdfPath[i].lines;
@@ -150,10 +150,16 @@ CPageInfos* renderHtml(void *parser, unsigned int pageNum, float scale) {
     cPageInfos->items = copyItems(pageInfo.m_items);
 
     cPageInfos->line_len = pageInfo.m_lines.size();
-    cPageInfos->lines = copylines(pageInfo.m_lines);
+    cPageInfos->lines = new CPdfLine[pageInfo.m_lines.size()];
+    for (size_t i = 0; i < pageInfo.m_lines.size(); ++i) {
+        cPageInfos->lines[i].x0 = pageInfo.m_lines[i].x0;
+        cPageInfos->lines[i].y0 = pageInfo.m_lines[i].y0;
+        cPageInfos->lines[i].x1 = pageInfo.m_lines[i].x1;
+        cPageInfos->lines[i].y1 = pageInfo.m_lines[i].y1;
+    }
 
     cPageInfos->graph_len = pageInfo.m_graphs.size();
-    cPageInfos->graphs = copylines(pageInfo.m_graphs);
+    cPageInfos->graphs = copyGraphs(pageInfo.m_graphs);
 
 //    delete(&pageInfo);
     return cPageInfos;
@@ -167,9 +173,9 @@ void deletePageInfos(CPageInfos *cPageInfos) {
     delete [] cPageInfos->fonts;
     delete [] cPageInfos->images;
 
+    delete [] cPageInfos->lines;
     deleteItems(cPageInfos->items, cPageInfos->item_len);
-    deleteLines(cPageInfos->lines, cPageInfos->line_len);
-    deleteLines(cPageInfos->graphs, cPageInfos->graph_len);
+    deleteGraphs(cPageInfos->graphs, cPageInfos->graph_len);
 
     delete cPageInfos;
 }

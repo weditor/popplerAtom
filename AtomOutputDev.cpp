@@ -3,6 +3,7 @@
 //
 
 #include <cmath>
+#include <climits>
 #include <iostream>
 #include <goo/PNGWriter.h>
 #include <goo/GooList.h>
@@ -389,7 +390,21 @@ void AtomPage::addImage(AtomImage img) {
 }
 
 void AtomPage::addLine(PdfPath shape) {
-    m_pageInfos.m_lines.push_back(shape);
+    if (shape.isLine()) {
+//    if (true) {
+        int xMin=INT_MAX, yMin=INT_MAX, xMax=INT_MIN, yMax=INT_MIN;
+        for(auto line: shape.lines) {
+            xMin = std::min(xMin, std::min(line.x0, line.x1));
+            yMin = std::min(yMin, std::min(line.y0, line.y1));
+            xMax = std::max(xMax, std::max(line.x0, line.x1));
+            yMax = std::max(yMax, std::max(line.y0, line.y1));
+        }
+        PdfLine line(xMin, yMin, xMax, yMax);
+        m_pageInfos.m_lines.push_back(line);
+    }
+    else {
+        m_pageInfos.m_graphs.push_back(shape);
+    }
 }
 
 

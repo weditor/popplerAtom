@@ -15,7 +15,7 @@ def _render_items(items, out: TextIO, offset: float, ratio: float):
         _render_items(PdfIterator(item.children, item.children_len), out, offset, ratio)
 
 
-def _render_lines(pathes, out: TextIO, offset: float, ratio: float):
+def _render_graphs(pathes, out: TextIO, offset: float, ratio: float):
     for path in pathes:  # type: CPdfShape
         out.write("<div></div>\n")
         if path.type != 2:
@@ -26,6 +26,15 @@ def _render_lines(pathes, out: TextIO, offset: float, ratio: float):
                       f'width:{(abs(line.x1-line.x0)+1)*ratio}px;'
                       f'height:{(abs(line.y1-line.y0)+1)*ratio}px;'
                       f'border: red solid 1px"></div>\n')
+
+
+def _render_lines(lines, out: TextIO, offset: float, ratio: float):
+    for line in lines:  # type: CPdfLine
+        out.write(f'<div style="position:absolute;left:{min(line.x0, line.x1)*ratio}px;'
+                  f'top:{(min(line.y0, line.y1)+offset)*ratio}px;'
+                  f'width:{max(abs(line.x1-line.x0)*ratio, 1)}px;'
+                  f'height:{max(abs(line.y1-line.y0)*ratio, 1)}px;'
+                  f'border: red solid 1px"></div>\n')
 
 
 def render_page_info(page_info: PageInfo, out: TextIO, offset: float=0.0, ratio: float=1.0):
