@@ -12,6 +12,8 @@ file_list = [
 
     ('utils/AtomOutputDev.cpp', 'AtomOutputDev.cpp'),
     ('utils/AtomOutputDev.h', 'AtomOutputDev.h'),
+    ('utils/AtomPath.cpp', 'AtomPath.cpp'),
+    ('utils/AtomPath.h', 'AtomPath.h'),
     ('utils/PdfAtomCApi.cpp', 'PdfAtomCApi.cpp'),
     ('utils/PdfAtomCApi.h', 'PdfAtomCApi.h'),
     ('utils/PdfAtomInterface.cpp', 'PdfAtomInterface.cpp'),
