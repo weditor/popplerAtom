@@ -122,6 +122,21 @@ void deletePageInfos(CPageInfos *cPageInfos);
 CPdfStructInfo* getStructure(void *parser, unsigned long *size);
 void deleteStructure(CPdfStructInfo *cStructInfo, unsigned long size);
 
+/**
+ * render image from pdf.
+ * given crop box must be scaled by yourself.
+ * @param parser
+ * @param pageNum : page
+ * @param x : crop x-axis , start x
+ * @param y : crop y-axis , start y
+ * @param w : crop width ,
+ * @param h : crop height ,
+ * @param scale : image scale.
+ */
+void cropImage(void *parser, unsigned int pageNum,
+        unsigned int x=0, unsigned int y=0, unsigned int w=0, unsigned int h=0, float scale=1.0);
+
+
 #ifdef __cplusplus
 }
 #endif

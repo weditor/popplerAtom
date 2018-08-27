@@ -21,16 +21,6 @@
 #include <algorithm>
 
 
-static inline int splashRound(double x) {
-    x = x+0.5;
-    if (x > 0) {
-        return (int)x;
-    }
-    else {
-        return (int)floor(x);
-    }
-}
-
 static inline GBool is_within(double a, double thresh, double b) {
     return fabs(a-b) < thresh;
 }

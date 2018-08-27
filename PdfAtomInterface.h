@@ -33,6 +33,8 @@ public:
     void getDocInfo();
     void renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale=1.0);
     std::vector<PdfStructInfo> getStructure();
+    void cropImage(void **data, unsigned int* size,
+            unsigned int pageNum, unsigned int x=0, unsigned int y=0, unsigned int w=0, unsigned int h=0, float scale=1.0);
 private:
     void getStructureInner(const StructElement *element, std::vector<PdfStructInfo> &infoVec);
     GlobalParams *globalParams;
