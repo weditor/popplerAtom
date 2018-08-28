@@ -48,9 +48,13 @@ dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cmake-bu
 
 
 PdfParser.init_global_params()
-
 parser = PdfParser(os.path.join(dir_path, "dahua.pdf").encode())
 
+img = parser.crop_image(2)
+with open("test_py_2.png", 'wb') as fp:
+    fp.write(img)
+
+exit(0)
 page_offset = 0
 with open("test.html", 'w', encoding='utf-8') as fp:
     fp.write("<html><head><meta charset=\"utf-8\"></head><body>\n")

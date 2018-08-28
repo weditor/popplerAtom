@@ -213,10 +213,13 @@ void deleteStructure(CPdfStructInfo *cStructInfo, unsigned long size) {
     delete [] cStructInfo;
 }
 
-void cropImage(void *parser, unsigned int pageNum,
+void cropImage(void *parser, unsigned int pageNum, char **buff, unsigned long* size,
         unsigned int x, unsigned int y, unsigned int w, unsigned int h, float scale) {
-    ((PdfAtomInterface*)parser)->cropImage(nullptr, nullptr, pageNum, x, y, w, h, scale);
+    ((PdfAtomInterface*)parser)->cropImage(buff, size, pageNum, x, y, w, h, scale);
 }
 
-
+void freeImage(char **buff) {
+    free(*buff);
+    *buff = nullptr;
+}
 

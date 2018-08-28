@@ -173,6 +173,12 @@ renderHtml.restype = POINTER(CPageInfos)
 deletePageInfos = pdfparser.deletePageInfos
 deletePageInfos.argtypes = [POINTER(CPageInfos)]
 
+crop_image = pdfparser.cropImage
+crop_image.argtypes = [c_void_p, c_uint, POINTER(POINTER(c_char)), POINTER(c_ulong), c_uint, c_uint, c_uint, c_uint, c_float]
+
+free_image = pdfparser.freeImage
+free_image.argtypes = [POINTER(POINTER(c_char))]
+
 
 class PdfIterator:
     def __init__(self, pointer, size):
@@ -251,6 +257,14 @@ class PdfParser:
     def get_page_info(self, page_num, scale=1.0):
         return PageInfo(renderHtml(self.parser, page_num, scale).contents)
 
+    def crop_image(self, page_num, x=0, y=0, w=0, h=0, scale=1.0):
+        p_data = POINTER(c_char)()
+        size = c_ulong(0)
+        crop_image(c_void_p(self.parser), page_num, pointer(p_data), pointer(size),
+                   c_uint(x), c_uint(y), c_uint(w), c_uint(h), c_float(scale))
+        ret = p_data[:size.value]
+        free_image(pointer(p_data))
+        return ret
 
 if __name__ == '__main__':
     initGlobalParams(None)

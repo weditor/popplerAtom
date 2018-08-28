@@ -10,6 +10,9 @@
 #include "goo/GooString.h"
 #include "AtomOutputDev.h"
 #include "CairoOutputDev.h"
+#include "goo/ImgWriter.h"
+#include "goo/JpegWriter.h"
+#include "goo/PNGWriter.h"
 
 // todo : delete these global vars
 GBool fontFullName = gFalse;
@@ -51,11 +54,14 @@ PdfAtomInterface::PdfAtomInterface(const char *pdfName, const char* ownerPW, con
 
     m_doc = PDFDocFactory().createPDFDoc(*m_pdfName, m_ownerPW, m_userPW);
     m_atomOutputDev = new AtomOutputDev();
+    m_cairoOutputDev = new CairoOutputDev();
 }
 
 PdfAtomInterface::~PdfAtomInterface() {
-    delete(m_doc);
+    delete(m_cairoOutputDev);
     delete(m_atomOutputDev);
+    delete(m_doc);
+
     if (m_ownerPW){
         delete(m_ownerPW);
     }
@@ -175,13 +181,9 @@ static void renderPage(cairo_surface_t * surface, PDFDoc *doc, CairoOutputDev *c
 }
 
 
-#include "goo/ImgWriter.h"
-#include "goo/JpegWriter.h"
-#include "goo/PNGWriter.h"
-static void writePageImage(GooString *filename, cairo_surface_t *surface, float resolution)
+static void writePageImage(cairo_surface_t *surface, float resolution, char **buff, size_t *buffSize)
 {
     ImgWriter *writer = nullptr;
-    FILE *file;
     int height, width, stride;
     unsigned char *data;
 
@@ -198,10 +200,11 @@ static void writePageImage(GooString *filename, cairo_surface_t *surface, float 
 //            static_cast<JpegWriter*>(writer)->setQuality(jpegQuality);
 //#endif
 
-    file = fopen(filename->getCString(), "wb");
+//    FILE *file = fopen(filename->getCString(), "wb");
+    FILE *file = open_memstream(buff, buffSize);
 
     if (!file) {
-        fprintf(stderr, "Error opening output file %s\n", filename->getCString());
+//        fprintf(stderr, "Error opening output file %s\n", filename->getCString());
         exit(2);
     }
 
@@ -212,7 +215,7 @@ static void writePageImage(GooString *filename, cairo_surface_t *surface, float 
     data = cairo_image_surface_get_data(surface);
 
     if (!writer->init(file, width, height, resolution, resolution)) {
-        fprintf(stderr, "Error writing %s\n", filename->getCString());
+//        fprintf(stderr, "Error writing %s\n", filename->getCString());
         exit(2);
     }
     unsigned char *row = (unsigned char *) gmallocn(width, 4);
@@ -244,11 +247,9 @@ static void writePageImage(GooString *filename, cairo_surface_t *surface, float 
     fclose(file);
 }
 
-
-void PdfAtomInterface::cropImage(void **data, unsigned int *size,
+void PdfAtomInterface::cropImage(char **data, unsigned long *size,
         unsigned int pageNum, unsigned int x, unsigned int y, unsigned int w, unsigned int h, float scale) {
-    auto *cairoOut = new CairoOutputDev();
-    cairoOut->startDoc(m_doc);
+    m_cairoOutputDev->startDoc(m_doc);
 
     double pg_w = m_doc->getPageMediaWidth(pageNum)*scale;
     double pg_h = m_doc->getPageMediaHeight(pageNum)*scale;
@@ -264,13 +265,11 @@ void PdfAtomInterface::cropImage(void **data, unsigned int *size,
     int output_w =  (x + crop_w > pg_w ? (int)ceil(pg_w - x) : w);
     int output_h = (y + crop_h > pg_h ? (int)ceil(pg_h - y) : h);
     cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, output_w, output_h);
-    renderPage(surface, m_doc, cairoOut, pageNum, x, y, scale);
+    renderPage(surface, m_doc, m_cairoOutputDev, pageNum, x, y, scale);
 
-    cairo_status_t status;
-
-    writePageImage(new GooString("test.png"), surface, DFLT_SOLUTION*scale);
+    writePageImage(surface, DFLT_SOLUTION*scale, data, size);
     cairo_surface_finish(surface);
-    status = cairo_surface_status(surface);
+    cairo_status_t status = cairo_surface_status(surface);
     if (status)
         fprintf(stderr, "cairo error: %s\n", cairo_status_to_string(status));
     cairo_surface_destroy(surface);
