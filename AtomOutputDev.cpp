@@ -574,11 +574,10 @@ void AtomOutputDev::getInfo(unsigned int pageNum, PageInfos &pageInfos) {
 }
 
 AtomPath *AtomOutputDev::convertPath(GfxState *state, GfxPath *path, GBool dropEmptySubPaths) {
-    AtomPath *sPath;
     int i, j;
 
     const int n = dropEmptySubPaths ? 1 : 0;
-    sPath = new AtomPath();
+    auto *sPath = new AtomPath();
     for (i = 0; i < path->getNumSubpaths(); ++i) {
         GfxSubpath *subPath = path->getSubpath(i);
         if (subPath->getNumPoints() > n) {

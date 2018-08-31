@@ -266,6 +266,7 @@ class PdfParser:
         free_image(pointer(p_data))
         return ret
 
+
 if __name__ == '__main__':
     initGlobalParams(None)
 
