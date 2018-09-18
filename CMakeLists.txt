@@ -133,16 +133,41 @@ install(FILES pdftohtml.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 # pdfatom
 set(pdfatom_SOURCES ${common_srcs}
-        HtmlFonts.cc
-        PdfAtomInterface.cpp PdfAtomInterface.h AtomOutputDev.cpp AtomOutputDev.h PdfAtomCApi.cpp PdfAtomCApi.h)
+        PdfAtomInterface.cpp
+        AtomOutputDev.cpp
+        PdfAtomCApi.cpp
+        AtomPath.cpp
+        pdftocairo.cc
+        pdftocairo-win32.cc
+        ${CMAKE_SOURCE_DIR}/poppler/CairoFontEngine.cc
+        ${CMAKE_SOURCE_DIR}/poppler/CairoOutputDev.cc
+        ${CMAKE_SOURCE_DIR}/poppler/CairoRescaleBox.cc)
 add_library(pdfatom ${pdfatom_SOURCES})
-target_link_libraries(pdfatom ${common_libs})
+target_link_libraries(pdfatom ${CAIRO_LIBRARIES} ${FREETYPE_LIBRARIES} ${common_libs})
+if(LCMS_FOUND)
+  target_link_libraries(pdfatom ${LCMS_LIBRARIES})
+endif()
+if(CMAKE_USE_PTHREADS_INIT)
+  target_link_libraries(pdfatom Threads::Threads)
+endif()
+if(LCMS2_FOUND)
+  target_link_libraries(pdfatom ${LCMS2_LIBRARIES})
+endif()
 install(TARGETS pdfatom DESTINATION bin)
 
 # pdfatom_glibc
 set(pdfatom_glibc_SOURCES PdfAtomCApi.cpp PdfAtomCApi.h)
-add_library(pdfatom_glibc ${pdfatom_glibc_SOURCES})
-target_link_libraries(pdfatom_glibc pdfatom ${common_libs})
+add_library(pdfatom_glibc ${pdfatom_glibc_SOURCES} ${pdfatom_SOURCES})
+target_link_libraries(pdfatom_glibc ${CAIRO_LIBRARIES} ${FREETYPE_LIBRARIES} ${common_libs})
+if(LCMS_FOUND)
+  target_link_libraries(pdfatom_glibc ${LCMS_LIBRARIES})
+endif()
+if(CMAKE_USE_PTHREADS_INIT)
+  target_link_libraries(pdfatom_glibc Threads::Threads)
+endif()
+if(LCMS2_FOUND)
+  target_link_libraries(pdfatom_glibc ${LCMS2_LIBRARIES})
+endif()
 install(TARGETS pdfatom_glibc DESTINATION bin)
 
 # pdfatom_test

@@ -197,17 +197,6 @@ class PdfIterator:
         return self._pointer[self._pos]
 
 
-# class PdfShape:
-#     def __init__(self, shape):
-#         self._shape = shape
-#
-#     @property
-#     def type(self):
-#         return self._shape.type
-
-
-
-
 class PageInfo:
     def __init__(self, page_info: CPageInfos):
         self.page_info = page_info

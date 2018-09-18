@@ -14,10 +14,6 @@
 #include "goo/JpegWriter.h"
 #include "goo/PNGWriter.h"
 
-// todo : delete these global vars
-GBool fontFullName = gFalse;
-GBool xml = gFalse;
-
 
 void initGlobalParams(const char* popplerData){
     if(!globalParams) {

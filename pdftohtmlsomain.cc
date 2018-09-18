@@ -83,16 +83,21 @@ static void printStructure(CPdfStructInfo *pdfStructInfo, unsigned long size, un
     }
 }
 
-static void printLines(CPdfPath *pdfPath, unsigned long size) {
+static void printGraphs(CPdfPath *pdfPath, unsigned long size) {
     for (size_t i = 0; i < size; ++i) {
         cout << "path:" << i << "*********************************************" << endl;
 
         CPdfLine *pdfLine = pdfPath[i].lines;
         for (size_t j = 0; j < pdfPath[i].line_len; ++j) {
-//            cout << "\tline:" << j << "*********************************************" << endl;
             cout << "\t" << j << " (" << pdfPath[i].type << ")>> " << pdfLine[j].x0
                  << "," << pdfLine[j].y0 << "," << pdfLine[j].x1 << "," << pdfLine[j].y1 << endl;
         }
+    }
+}
+
+static void printLines(CPdfLine *pdfLine, unsigned long size) {
+    for (size_t i = 0; i < size; ++i) {
+        cout << "line(" << i << "):" << pdfLine->x0 << "," << pdfLine->y0 << "," << pdfLine->x1 << "," << pdfLine->y1 << endl;
     }
 }
 
@@ -124,6 +129,12 @@ int main(int argc, char **argv) {
 
     auto parser = createAtomParser(pdf_path);
     cout << "pageNumber:" << getNumPages(parser) << endl;
+    char *buf;
+    unsigned long size;
+    cropImage(parser, 2, &buf, &size, 100, 0, 300, 420, 2);
+    std::cout<<size<<std::endl;
+    free(buf);
+//    exit(0);
     for (int i = 0; i < getNumPages(parser); ++i) {
         if (i != 5) {
             continue;
@@ -133,7 +144,7 @@ int main(int argc, char **argv) {
         cout << "images: **************************************************" << endl;
         printImages(pageInfos->images, pageInfos->image_len);
         cout << "vec graphs: **************************************************" << endl;
-        printLines(pageInfos->graphs, pageInfos->graph_len);
+        printGraphs(pageInfos->graphs, pageInfos->graph_len);
         cout << "lines: **************************************************" << endl;
         printLines(pageInfos->lines, pageInfos->line_len);
         cout << "fonts: **************************************************" << endl;
