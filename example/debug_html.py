@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append('../')
+# sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../'))
 from pdfatom import *
 from typing import TextIO
 # import jinja2
@@ -44,17 +44,18 @@ def render_page_info(page_info: PageInfo, out: TextIO, offset: float=0.0, ratio:
     _render_graphs(page_info.graphs, out, offset, ratio)
 
 
-dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cmake-build-debug/utils/")
+# dir_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../")
+dir_path = os.path.dirname(os.path.abspath(__file__))
 
 
 PdfParser.init_global_params()
-parser = PdfParser(os.path.join(dir_path, "dahua.pdf").encode())
+parser = PdfParser(os.path.join(dir_path, "tongyu.pdf").encode())
 
-img = parser.crop_image(2)
-with open("test_py_2.png", 'wb') as fp:
-    fp.write(img)
+# img = parser.crop_image(2)
+# with open("test_py_2.png", 'wb') as fp:
+#     fp.write(img)
 
-exit(0)
+# exit(0)
 page_offset = 0
 with open("test.html", 'w', encoding='utf-8') as fp:
     fp.write("<html><head><meta charset=\"utf-8\"></head><body>\n")

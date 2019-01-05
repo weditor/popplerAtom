@@ -30,7 +30,7 @@ __all__ = [
 # os.chdir('/home/weditor/work/popplerAtom/poppler-0.66.0/cmake-build-debug/utils/')
 # os.environ['LD_LIBRARY_PATH'] = './:../'
 
-dir_path = '/home/weditor/work/popplerAtom/poppler-0.66.0/cmake-build-debug/utils/'
+dir_path = os.path.abspath(os.path.dirname(__file__))
 
 
 class CAtomBox(Structure):
@@ -147,7 +147,9 @@ class CPageInfos(Structure):
     ]
 
 
-pdfparser = cdll.LoadLibrary(os.path.join(dir_path, "libpdfatom_glibc.so"))
+# pdfparser = cdll.LoadLibrary(os.path.join(dir_path, "libpdfatom_glibc.so"))
+print(os.path.join(dir_path, "libpdfatom.dll"))
+pdfparser = cdll.LoadLibrary(os.path.join(dir_path, "libpdfatom.dll"))
 
 initGlobalParams = pdfparser.c_initGlobalParams
 initGlobalParams.argtypes = [c_char_p]

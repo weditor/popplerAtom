@@ -14,7 +14,7 @@ class GooString;
 class PDFDoc;
 class StructElement;
 class AtomOutputDev;
-class CairoOutputDev;
+// class CairoOutputDev;
 
 
 #define DFLT_SOLUTION 72
@@ -44,7 +44,7 @@ private:
     GooString *m_userPW;
     PDFDoc *m_doc;
     AtomOutputDev *m_atomOutputDev;
-    CairoOutputDev *m_cairoOutputDev;
+    // CairoOutputDev *m_cairoOutputDev;
 };
 
 
