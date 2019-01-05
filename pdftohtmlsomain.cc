@@ -131,7 +131,9 @@ int main(int argc, char **argv) {
     cout << "pageNumber:" << getNumPages(parser) << endl;
     char *buf;
     unsigned long size;
-    cropImage(parser, 2, &buf, &size, 100, 0, 300, 420, 2);
+    unsigned long out_w;
+    unsigned long out_h;
+    cropImage(parser, 2, &buf, &size, &out_w, &out_h, 100, 0, 300, 420, 2);
     std::cout<<size<<std::endl;
     free(buf);
 //    exit(0);

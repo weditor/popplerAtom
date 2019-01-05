@@ -134,8 +134,9 @@ void deleteStructure(CPdfStructInfo *cStructInfo, unsigned long size);
  * @param h : crop height ,
  * @param scale : image scale.
  */
-void cropImage(void *parser, unsigned int pageNum, char **buff, unsigned long* size,
-        unsigned int x=0, unsigned int y=0, unsigned int w=0, unsigned int h=0, float scale=1.0);
+void cropImage(void *parser, unsigned int pageNum, char **buff, unsigned long* size, 
+        unsigned long* out_w, unsigned long* out_h,
+        int x=-1, int y=-1, int w=-1, int h=-1, float scale=1.0);
 
 void freeImage(char **buff);
 

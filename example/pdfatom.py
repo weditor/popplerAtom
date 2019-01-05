@@ -176,7 +176,9 @@ deletePageInfos = pdfparser.deletePageInfos
 deletePageInfos.argtypes = [POINTER(CPageInfos)]
 
 crop_image = pdfparser.cropImage
-crop_image.argtypes = [c_void_p, c_uint, POINTER(POINTER(c_char)), POINTER(c_ulong), c_uint, c_uint, c_uint, c_uint, c_float]
+crop_image.argtypes = [c_void_p, c_uint, POINTER(POINTER(c_char)), POINTER(c_ulong),
+    POINTER(c_ulong), POINTER(c_ulong),
+    c_int, c_int, c_int, c_int, c_float]
 
 free_image = pdfparser.freeImage
 free_image.argtypes = [POINTER(POINTER(c_char))]
@@ -248,14 +250,17 @@ class PdfParser:
     def get_page_info(self, page_num, scale=1.0):
         return PageInfo(renderHtml(self.parser, page_num, scale).contents)
 
-    def crop_image(self, page_num, x=0, y=0, w=0, h=0, scale=1.0):
+    def crop_image(self, page_num, x=-1, y=-1, w=-1, h=-1, scale=1.0):
         p_data = POINTER(c_char)()
         size = c_ulong(0)
-        crop_image(c_void_p(self.parser), page_num, pointer(p_data), pointer(size),
-                   c_uint(x), c_uint(y), c_uint(w), c_uint(h), c_float(scale))
+        out_w = c_ulong(0)
+        out_h = c_ulong(0)
+
+        crop_image(c_void_p(self.parser), page_num, pointer(p_data), pointer(size), out_w, out_h,
+                   x, y, w, h, c_float(scale))
         ret = p_data[:size.value]
         free_image(pointer(p_data))
-        return ret
+        return ret, (out_h.value, out_w.value)
 
 
 if __name__ == '__main__':

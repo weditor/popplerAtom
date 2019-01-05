@@ -56,6 +56,8 @@ parser = PdfParser(os.path.join(dir_path, "tongyu.pdf").encode())
 #     fp.write(img)
 
 # exit(0)
+from PIL import Image
+
 page_offset = 0
 with open("test.html", 'w', encoding='utf-8') as fp:
     fp.write("<html><head><meta charset=\"utf-8\"></head><body>\n")
@@ -64,6 +66,10 @@ with open("test.html", 'w', encoding='utf-8') as fp:
         pageinfos = parser.get_page_info(page_idx, 1.0)
         render_page_info(pageinfos, fp, offset=page_offset, ratio=1.8)
         page_offset += pageinfos.height
+        if page_idx == 1:
+            data, (h, w) = parser.crop_image(2, scale=3)
+            img = Image.frombytes("RGBA", (w, h), data)
+            img.save(f"{page_idx}.png")
     fp.write("\n</body></html>\n")
 
 PdfParser.destroy_global_params()
