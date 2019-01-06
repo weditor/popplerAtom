@@ -1,13 +1,13 @@
 
-TARGET = libpdfatom.dll
+TARGET = libpdfatom.so
 
-POPPLER_PREFIX = "C:/Program Files (x86)/poppler"
+POPPLER_PREFIX = "/usr/local"
 
 POPPLER_INCLUDE = -I$(POPPLER_PREFIX)/include \
 	-I$(POPPLER_PREFIX)/include/poppler \
 	-I$(POPPLER_PREFIX)/include/poppler/goo
 
-POPPLER_LIB = -L"C:/Program Files (x86)/poppler/lib" -lpoppler -lpoppler-cpp
+POPPLER_LIB = -L"/usr/local/lib64" -lpoppler -lpoppler-cpp
 
 SRC = AtomOutputDev.cpp  AtomPath.cpp  PdfAtomCApi.cpp  PdfAtomInterface.cpp
 

@@ -148,8 +148,9 @@ class CPageInfos(Structure):
 
 
 # pdfparser = cdll.LoadLibrary(os.path.join(dir_path, "libpdfatom_glibc.so"))
-print(os.path.join(dir_path, "libpdfatom.dll"))
-pdfparser = cdll.LoadLibrary(os.path.join(dir_path, "libpdfatom.dll"))
+# print(os.path.join(dir_path, "libpdfatom.dll"))
+# pdfparser = cdll.LoadLibrary(os.path.join(dir_path, "libpdfatom.so"))
+pdfparser = cdll.LoadLibrary("./libpdfatom.so")
 
 initGlobalParams = pdfparser.c_initGlobalParams
 initGlobalParams.argtypes = [c_char_p]

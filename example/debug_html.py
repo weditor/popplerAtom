@@ -49,7 +49,7 @@ dir_path = os.path.dirname(os.path.abspath(__file__))
 
 
 PdfParser.init_global_params()
-parser = PdfParser(os.path.join(dir_path, "tongyu.pdf").encode())
+parser = PdfParser(os.path.join(dir_path, "dahua.pdf").encode())
 
 # img = parser.crop_image(2)
 # with open("test_py_2.png", 'wb') as fp:
