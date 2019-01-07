@@ -184,6 +184,18 @@ public:
     // Does this device need non-text content?
     GBool needNonText() override { return gTrue; }
 
+    // Does this device use tilingPatternFill()?  If this returns false,
+    // tiling pattern fills will be reduced to a series of other drawing
+    // operations.
+    virtual GBool useTilingPatternFill() { return gTrue; }
+    
+    virtual GBool tilingPatternFill(GfxState * /*state*/, Gfx * /*gfx*/, Catalog * /*cat*/, Object * /*str*/,
+				  double * /*pmat*/, int /*paintType*/, int /*tilingType*/, Dict * /*resDict*/,
+				  double * /*mat*/, double * /*bbox*/,
+				  int /*x0*/, int /*y0*/, int /*x1*/, int /*y1*/,
+				  double /*xStep*/, double /*yStep*/)
+    { return gTrue; }
+
     // Start a page.
     void startPage(int pageNum, GfxState *state, XRef *xref) override;
 
