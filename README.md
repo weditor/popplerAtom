@@ -2,29 +2,45 @@
 A pdf parsing library, based on poppler. output all words/images/shapes with coordinates
 
 # install
-you should install libpoppler first. download it from [https://poppler.freedesktop.org/](https://poppler.freedesktop.org/)
+Install libpoppler first. download it from [https://poppler.freedesktop.org/](https://poppler.freedesktop.org/)
 
-## install libpoppler (source)
+## install libpoppler 
+
+### from source
 ```sh
+
+# use labest poppler relase if possible, my version is 0.68 while i write this document.
 wget https://poppler.freedesktop.org/poppler-0.68.0.tar.xz
 tar -axvf poppler-0.68.0.tar.xz
 cd poppler-0.68.0
 mkdir build
 cd build
-# if you donnot add -DCMAKE_INSTALL_PREFIX=/path/to/install, then it will be install in /usr/local/.
-cmake .. -DENABLE_QT5=OFF -DBUILD_QT5_TESTS=OFF -DENABLE_XPDF_HEADERS=ON -DCMAKE_INSTALL_PREFIX=/path/to/install
+
+# install extra xpdf headers. the default is OFF.
+cmake .. -DENABLE_XPDF_HEADERS=ON
+
+# if you want to speedup the compile, you can disable QT/utils .
+# cmake .. -DENABLE_XPDF_HEADERS=ON -DENABLE_UTILS=OFF -DENABLE_QT5=OFF
+
+# if you compile poppler in MSYS2 on windows, add '-G "MSYS Makefiles"' and CMAKE_INSTALL_PREFIX to install in /mingw64.
+# cmake .. -G "MSYS Makefiles" -DENABLE_XPDF_HEADERS=ON -DCMAKE_INSTALL_PREFIX=/mingw64
+
 make && make install
 ```
 
 ## build popplerAtom
 
-*To be supplemented*
+```sh
+mkdir build && cd build;
+cmake .. ;
+make ;
+```
 
 # Api
-*To be supplemented*
 
 ## C++ interfaces
 see `PdfAtomInterface.h`
+
 
 ## C interfaces
 see `PdfAtomCApi.h`
