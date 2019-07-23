@@ -6,7 +6,7 @@
 #define POPPLER_PDFATOMINTERFACE_H
 
 #include "poppler_atom_types.h"
-#include "gtypes.h"
+// #include "gtypes.h"
 #include <string>
 
 class GlobalParams;
@@ -15,27 +15,26 @@ class PDFDoc;
 class StructElement;
 class AtomOutputDev;
 
-namespace poppler {
-    class document;
+namespace poppler
+{
+class document;
 }
-
 
 #define DFLT_SOLUTION 72
 
-
-extern void initGlobalParams(const char* popplerData = nullptr);
+extern void initGlobalParams(const char *popplerData = nullptr);
 extern void destroyGlobalParams();
 
-
-class PdfAtomInterface {
+class PdfAtomInterface
+{
 public:
-    explicit PdfAtomInterface(const char *pdfName, const char* ownerPW=nullptr, const char * userPW=nullptr);
+    explicit PdfAtomInterface(const char *pdfName, const char *ownerPW = nullptr, const char *userPW = nullptr);
     ~PdfAtomInterface();
 
     /**! \brief is the pdf ok.
      * \return is the pdf file ok.
      */
-    GBool isOk();
+    bool isOk();
 
     /**
      * \return total page number of current pdf
@@ -50,7 +49,7 @@ public:
      * \param scale resize the output coordinates.
      * \return 
      */
-    void renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale=1.0);
+    void renderHtml(unsigned int pageNum, PageInfos &pageInfos, float scale = 1.0);
 
     /**! \brief get pdf tag info
      * \return 
@@ -69,9 +68,10 @@ public:
      * \param h height of the crop rect in pdf page.
      * \param scale scale the output image.
      */
-    void cropImage(char **data, unsigned long* size, 
-            unsigned long* out_w, unsigned long* out_h, unsigned int pageNum,
-            int x=-1, int y=-1, int w=-1, int h=-1, float scale=1.0);
+    void cropImage(char **data, unsigned long *size,
+                   unsigned long *out_w, unsigned long *out_h, unsigned int pageNum,
+                   int x = -1, int y = -1, int w = -1, int h = -1, float scale = 1.0);
+
 private:
     void getStructureInner(const StructElement *element, std::vector<PdfStructInfo> &infoVec);
     GlobalParams *globalParams;
@@ -82,6 +82,5 @@ private:
     AtomOutputDev *m_atomOutputDev;
     poppler::document *m_poppler_document;
 };
-
 
 #endif //POPPLER_PDFATOMINTERFACE_H

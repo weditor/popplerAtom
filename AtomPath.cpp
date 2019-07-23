@@ -7,27 +7,28 @@
 #include <algorithm>
 #include "AtomPath.h"
 
-
-static inline int splashRound(double x) {
-    x = x+0.5;
-    if (x > 0) {
+static inline int splashRound(double x)
+{
+    x = x + 0.5;
+    if (x > 0)
+    {
         return (int)x;
     }
-    else {
+    else
+    {
         return (int)floor(x);
     }
 }
-
 
 //------------------------------------------------------------------------
 // AtomXPath
 //------------------------------------------------------------------------
 
-
 // Transform a point from user space to device space.
 inline void AtomXPath::transform(double *matrix,
                                  double xi, double yi,
-                                 double *xo, double *yo) {
+                                 double *xo, double *yo)
+{
     //                          [ m[0] m[1] 0 ]
     // [xo yo 1] = [xi yi 1] *  [ m[2] m[3] 0 ]
     //                          [ m[4] m[5] 1 ]
@@ -36,8 +37,9 @@ inline void AtomXPath::transform(double *matrix,
 }
 
 AtomXPath::AtomXPath(AtomPath *path, double *matrix,
-                     double flatness, GBool closeSubpaths,
-                     GBool adjustLines, int linePosI) {
+                     double flatness, bool closeSubpaths,
+                     bool adjustLines, int linePosI)
+{
     AtomPathHint *hint;
     AtomXPathPoint *pts;
     AtomXPathAdjust *adjusts, *adjust;
@@ -47,16 +49,20 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
 
     // transform the points
     pts = (AtomXPathPoint *)gmallocn(path->length, sizeof(AtomXPathPoint));
-    for (i = 0; i < path->length; ++i) {
+    for (i = 0; i < path->length; ++i)
+    {
         transform(matrix, path->pts[i].x, path->pts[i].y, &pts[i].x, &pts[i].y);
     }
 
     // set up the stroke adjustment hints
-    if (path->hints) {
-        adjusts = (AtomXPathAdjust *) gmallocn(path->hintsLength, sizeof(AtomXPathAdjust));
-        for (i = 0; i < path->hintsLength; ++i) {
+    if (path->hints)
+    {
+        adjusts = (AtomXPathAdjust *)gmallocn(path->hintsLength, sizeof(AtomXPathAdjust));
+        for (i = 0; i < path->hintsLength; ++i)
+        {
             hint = &path->hints[i];
-            if (hint->ctrl0 + 1 >= path->length || hint->ctrl1 + 1 >= path->length) {
+            if (hint->ctrl0 + 1 >= path->length || hint->ctrl1 + 1 >= path->length)
+            {
                 gfree(adjusts);
                 adjusts = nullptr;
                 break;
@@ -69,28 +75,34 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
             y2 = pts[hint->ctrl1].y;
             x3 = pts[hint->ctrl1 + 1].x;
             y3 = pts[hint->ctrl1 + 1].y;
-            if (x0 == x1 && x2 == x3) {
-                adjusts[i].vert = gTrue;
+            if (x0 == x1 && x2 == x3)
+            {
+                adjusts[i].vert = true;
                 adj0 = x0;
                 adj1 = x2;
-            } else if (y0 == y1 && y2 == y3) {
-                adjusts[i].vert = gFalse;
+            }
+            else if (y0 == y1 && y2 == y3)
+            {
+                adjusts[i].vert = false;
                 adj0 = y0;
                 adj1 = y2;
-            } else {
+            }
+            else
+            {
                 gfree(adjusts);
                 adjusts = nullptr;
                 break;
             }
-            if (adj0 > adj1) {
+            if (adj0 > adj1)
+            {
                 x0 = adj0;
                 adj0 = adj1;
                 adj1 = x0;
             }
             adjusts[i].x0a = adj0 - 0.01;
             adjusts[i].x0b = adj0 + 0.01;
-            adjusts[i].xma = (double) 0.5 * (adj0 + adj1) - 0.01;
-            adjusts[i].xmb = (double) 0.5 * (adj0 + adj1) + 0.01;
+            adjusts[i].xma = (double)0.5 * (adj0 + adj1) - 0.01;
+            adjusts[i].xmb = (double)0.5 * (adj0 + adj1) + 0.01;
             adjusts[i].x1a = adj1 - 0.01;
             adjusts[i].x1b = adj1 + 0.01;
             // rounding both edge coordinates can result in lines of
@@ -100,14 +112,18 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
             // gaps between them
             x0 = splashRound(adj0);
             x1 = splashRound(adj1);
-            if (x1 == x0) {
-                if (adjustLines) {
+            if (x1 == x0)
+            {
+                if (adjustLines)
+                {
                     // the adjustment moves thin lines (clip rectangle with
                     // empty width or height) out of clip area, here we need
                     // a special adjustment:
                     x0 = linePosI;
                     x1 = x0 + 1;
-                } else {
+                }
+                else
+                {
                     x1 = x1 + 1;
                 }
             }
@@ -117,15 +133,19 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
             adjusts[i].firstPt = hint->firstPt;
             adjusts[i].lastPt = hint->lastPt;
         }
-
-    } else {
+    }
+    else
+    {
         adjusts = nullptr;
     }
 
     // perform stroke adjustment
-    if (adjusts) {
-        for (i = 0, adjust = adjusts; i < path->hintsLength; ++i, ++adjust) {
-            for (j = adjust->firstPt; j <= adjust->lastPt; ++j) {
+    if (adjusts)
+    {
+        for (i = 0, adjust = adjusts; i < path->hintsLength; ++i, ++adjust)
+        {
+            for (j = adjust->firstPt; j <= adjust->lastPt; ++j)
+            {
                 strokeAdjust(adjust, &pts[j].x, &pts[j].y);
             }
         }
@@ -138,44 +158,50 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
     x0 = y0 = xsp = ysp = 0; // make gcc happy
     curSubpath = 0;
     i = 0;
-    while (i < path->length) {
+    while (i < path->length)
+    {
 
         // first point in subpath - skip it
-        if (path->flags[i] & splashPathFirst) {
+        if (path->flags[i] & splashPathFirst)
+        {
             x0 = pts[i].x;
             y0 = pts[i].y;
             xsp = x0;
             ysp = y0;
             curSubpath = i;
             ++i;
-
-        } else {
+        }
+        else
+        {
 
             // curve segment
-            if (path->flags[i] & splashPathCurve) {
+            if (path->flags[i] & splashPathCurve)
+            {
                 x1 = pts[i].x;
                 y1 = pts[i].y;
-                x2 = pts[i+1].x;
-                y2 = pts[i+1].y;
-                x3 = pts[i+2].x;
-                y3 = pts[i+2].y;
+                x2 = pts[i + 1].x;
+                y2 = pts[i + 1].y;
+                x3 = pts[i + 2].x;
+                y3 = pts[i + 2].y;
                 addCurve(x0, y0, x1, y1, x2, y2, x3, y3,
                          flatness
-//                         bool(path->flags[i-1] & splashPathFirst),
-//                         bool(path->flags[i+2] & splashPathLast),
-//                         !closeSubpaths &&
-//                         (path->flags[i-1] & splashPathFirst) &&
-//                         !(path->flags[i-1] & splashPathClosed),
-//                         !closeSubpaths &&
-//                         (path->flags[i+2] & splashPathLast) &&
-//                         !(path->flags[i+2] & splashPathClosed)
-                         );
+                         //                         bool(path->flags[i-1] & splashPathFirst),
+                         //                         bool(path->flags[i+2] & splashPathLast),
+                         //                         !closeSubpaths &&
+                         //                         (path->flags[i-1] & splashPathFirst) &&
+                         //                         !(path->flags[i-1] & splashPathClosed),
+                         //                         !closeSubpaths &&
+                         //                         (path->flags[i+2] & splashPathLast) &&
+                         //                         !(path->flags[i+2] & splashPathClosed)
+                );
                 x0 = x3;
                 y0 = y3;
                 i += 3;
 
                 // line segment
-            } else {
+            }
+            else
+            {
                 x1 = pts[i].x;
                 y1 = pts[i].y;
                 addSegment(x0, y0, x1, y1);
@@ -186,9 +212,10 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
 
             // close a subpath
             if (closeSubpaths &&
-                (path->flags[i-1] & splashPathLast) &&
-                (pts[i-1].x != pts[curSubpath].x ||
-                 pts[i-1].y != pts[curSubpath].y)) {
+                (path->flags[i - 1] & splashPathLast) &&
+                (pts[i - 1].x != pts[curSubpath].x ||
+                 pts[i - 1].y != pts[curSubpath].y))
+            {
                 addSegment(x0, y0, xsp, ysp);
             }
         }
@@ -199,48 +226,68 @@ AtomXPath::AtomXPath(AtomPath *path, double *matrix,
 
 // Apply the stroke adjust hints to point <pt>: (*<xp>, *<yp>).
 void AtomXPath::strokeAdjust(AtomXPathAdjust *adjust,
-                             double *xp, double *yp) {
+                             double *xp, double *yp)
+{
     double x, y;
 
-    if (adjust->vert) {
+    if (adjust->vert)
+    {
         x = *xp;
-        if (x > adjust->x0a && x < adjust->x0b) {
+        if (x > adjust->x0a && x < adjust->x0b)
+        {
             *xp = adjust->x0;
-        } else if (x > adjust->xma && x < adjust->xmb) {
+        }
+        else if (x > adjust->xma && x < adjust->xmb)
+        {
             *xp = adjust->xm;
-        } else if (x > adjust->x1a && x < adjust->x1b) {
+        }
+        else if (x > adjust->x1a && x < adjust->x1b)
+        {
             *xp = adjust->x1;
         }
-    } else {
+    }
+    else
+    {
         y = *yp;
-        if (y > adjust->x0a && y < adjust->x0b) {
+        if (y > adjust->x0a && y < adjust->x0b)
+        {
             *yp = adjust->x0;
-        } else if (y > adjust->xma && y < adjust->xmb) {
+        }
+        else if (y > adjust->xma && y < adjust->xmb)
+        {
             *yp = adjust->xm;
-        } else if (y > adjust->x1a && y < adjust->x1b) {
+        }
+        else if (y > adjust->x1a && y < adjust->x1b)
+        {
             *yp = adjust->x1;
         }
     }
 }
 
-AtomXPath::AtomXPath(AtomXPath *xPath) {
+AtomXPath::AtomXPath(AtomXPath *xPath)
+{
     length = xPath->length;
     size = xPath->size;
     segs = (SplashXPathSeg *)gmallocn(size, sizeof(SplashXPathSeg));
     memcpy(segs, xPath->segs, length * sizeof(SplashXPathSeg));
 }
 
-AtomXPath::~AtomXPath() {
+AtomXPath::~AtomXPath()
+{
     gfree(segs);
 }
 
 // Add space for <nSegs> more segments
-void AtomXPath::grow(int nSegs) {
-    if (length + nSegs > size) {
-        if (size == 0) {
+void AtomXPath::grow(int nSegs)
+{
+    if (length + nSegs > size)
+    {
+        if (size == 0)
+        {
             size = 32;
         }
-        while (size < length + nSegs) {
+        while (size < length + nSegs)
+        {
             size *= 2;
         }
         segs = (SplashXPathSeg *)greallocn(segs, size, sizeof(SplashXPathSeg));
@@ -251,7 +298,8 @@ void AtomXPath::addCurve(double x0, double y0,
                          double x1, double y1,
                          double x2, double y2,
                          double x3, double y3,
-                         double flatness) {
+                         double flatness)
+{
     auto *cx = new double[(splashMaxCurveSplits + 1) * 3];
     auto *cy = new double[(splashMaxCurveSplits + 1) * 3];
     int *cNext = new int[splashMaxCurveSplits + 1];
@@ -278,7 +326,8 @@ void AtomXPath::addCurve(double x0, double y0,
 
     *(cNext + p1) = p2;
 
-    while (p1 < splashMaxCurveSplits) {
+    while (p1 < splashMaxCurveSplits)
+    {
 
         // get the next segment
         xl0 = *(cx + p1 * 3 + 0);
@@ -303,19 +352,22 @@ void AtomXPath::addCurve(double x0, double y0,
 
         dx = xx1 - mx;
         dy = yy1 - my;
-        d1 = dx*dx + dy*dy;
+        d1 = dx * dx + dy * dy;
         dx = xx2 - mx;
         dy = yy2 - my;
-        d2 = dx*dx + dy*dy;
+        d2 = dx * dx + dy * dy;
 
         // if the curve is flat enough, or no more subdivisions are
         // allowed, add the straight line segment
-        if (p2 - p1 == 1 || (d1 <= flatness2 && d2 <= flatness2)) {
+        if (p2 - p1 == 1 || (d1 <= flatness2 && d2 <= flatness2))
+        {
             addSegment(xl0, yl0, xr3, yr3);
             p1 = p2;
 
             // otherwise, subdivide the curve
-        } else {
+        }
+        else
+        {
             xl1 = (xl0 + xx1) * 0.5;
             yl1 = (yl0 + yy1) * 0.5;
             xh = (xx1 + xx2) * 0.5;
@@ -351,66 +403,88 @@ void AtomXPath::addCurve(double x0, double y0,
         }
     }
 
-    delete [] cx;
-    delete [] cy;
-    delete [] cNext;
+    delete[] cx;
+    delete[] cy;
+    delete[] cNext;
 }
 
 void AtomXPath::addSegment(double x0, double y0,
-                           double x1, double y1) {
+                           double x1, double y1)
+{
     grow(1);
     segs[length].x0 = x0;
     segs[length].y0 = y0;
     segs[length].x1 = x1;
     segs[length].y1 = y1;
     segs[length].flags = 0;
-    if (y1 == y0) {
+    if (y1 == y0)
+    {
         segs[length].dxdy = segs[length].dydx = 0;
         segs[length].flags |= splashXPathHoriz;
-        if (x1 == x0) {
+        if (x1 == x0)
+        {
             segs[length].flags |= splashXPathVert;
         }
-    } else if (x1 == x0) {
+    }
+    else if (x1 == x0)
+    {
         segs[length].dxdy = segs[length].dydx = 0;
         segs[length].flags |= splashXPathVert;
-    } else {
-#ifdef USE_FIXEDPOINT
-        if (FixedPoint::divCheck(x1 - x0, y1 - y0, &segs[length].dxdy)) {
-      segs[length].dydx = (double)1 / segs[length].dxdy;
-    } else {
-      segs[length].dxdy = segs[length].dydx = 0;
-      if (splashAbs(x1 - x0) > splashAbs(y1 - y0)) {
-	segs[length].flags |= splashXPathHoriz;
-      } else {
-	segs[length].flags |= splashXPathVert;
-      }
     }
+    else
+    {
+#ifdef USE_FIXEDPOINT
+        if (FixedPoint::divCheck(x1 - x0, y1 - y0, &segs[length].dxdy))
+        {
+            segs[length].dydx = (double)1 / segs[length].dxdy;
+        }
+        else
+        {
+            segs[length].dxdy = segs[length].dydx = 0;
+            if (splashAbs(x1 - x0) > splashAbs(y1 - y0))
+            {
+                segs[length].flags |= splashXPathHoriz;
+            }
+            else
+            {
+                segs[length].flags |= splashXPathVert;
+            }
+        }
 #else
         segs[length].dxdy = (x1 - x0) / (y1 - y0);
         segs[length].dydx = (double)1 / segs[length].dxdy;
 #endif
     }
-    if (y0 > y1) {
+    if (y0 > y1)
+    {
         segs[length].flags |= splashXPathFlip;
     }
     ++length;
 }
 
-struct cmpXPathSegsFunctor {
-    bool operator()(const SplashXPathSeg &seg0, const SplashXPathSeg &seg1) {
+struct cmpXPathSegsFunctor
+{
+    bool operator()(const SplashXPathSeg &seg0, const SplashXPathSeg &seg1)
+    {
         double x0, y0, x1, y1;
 
-        if (seg0.flags & splashXPathFlip) {
+        if (seg0.flags & splashXPathFlip)
+        {
             x0 = seg0.x1;
             y0 = seg0.y1;
-        } else {
+        }
+        else
+        {
             x0 = seg0.x0;
             y0 = seg0.y0;
         }
-        if (seg1.flags & splashXPathFlip) {
+        if (seg1.flags & splashXPathFlip)
+        {
             x1 = seg1.x1;
             y1 = seg1.y1;
-        } else {
+        }
+        else
+        {
             x1 = seg1.x0;
             y1 = seg1.y0;
         }
@@ -418,11 +492,10 @@ struct cmpXPathSegsFunctor {
     }
 };
 
-void AtomXPath::sort() {
+void AtomXPath::sort()
+{
     std::sort(segs, segs + length, cmpXPathSegsFunctor());
 }
-
-
 
 //------------------------------------------------------------------------
 // AtomPath
@@ -439,7 +512,8 @@ void AtomXPath::sort() {
 // 3. open subpath with two or more points
 //    [curSubpath < length - 1]
 
-AtomPath::AtomPath() {
+AtomPath::AtomPath()
+{
     pts = nullptr;
     flags = nullptr;
     length = size = 0;
@@ -448,61 +522,75 @@ AtomPath::AtomPath() {
     hintsLength = hintsSize = 0;
 }
 
-AtomPath::AtomPath(AtomPath *path) {
+AtomPath::AtomPath(AtomPath *path)
+{
     length = path->length;
     size = path->size;
     pts = (AtomPathPoint *)gmallocn(size, sizeof(AtomPathPoint));
-    flags = (Guchar *)gmallocn(size, sizeof(Guchar));
+    flags = (unsigned char *)gmallocn(size, sizeof(unsigned char));
     memcpy(pts, path->pts, length * sizeof(AtomPathPoint));
-    memcpy(flags, path->flags, length * sizeof(Guchar));
+    memcpy(flags, path->flags, length * sizeof(unsigned char));
     curSubpath = path->curSubpath;
-    if (path->hints) {
+    if (path->hints)
+    {
         hintsLength = hintsSize = path->hintsLength;
         hints = (AtomPathHint *)gmallocn(hintsSize, sizeof(AtomPathHint));
         memcpy(hints, path->hints, hintsLength * sizeof(AtomPathHint));
-    } else {
+    }
+    else
+    {
         hints = nullptr;
     }
 }
 
-AtomPath::~AtomPath() {
+AtomPath::~AtomPath()
+{
     gfree(pts);
     gfree(flags);
     gfree(hints);
 }
 
-void  AtomPath::reserve(int nPts) {
+void AtomPath::reserve(int nPts)
+{
     grow(nPts - size);
 }
 
 // Add space for <nPts> more points.
-void AtomPath::grow(int nPts) {
-    if (length + nPts > size) {
-        if (size == 0) {
+void AtomPath::grow(int nPts)
+{
+    if (length + nPts > size)
+    {
+        if (size == 0)
+        {
             size = 32;
         }
-        while (size < length + nPts) {
+        while (size < length + nPts)
+        {
             size *= 2;
         }
         pts = (AtomPathPoint *)greallocn(pts, size, sizeof(AtomPathPoint));
-        flags = (Guchar *)greallocn(flags, size, sizeof(Guchar));
+        flags = (unsigned char *)greallocn(flags, size, sizeof(unsigned char));
     }
 }
 
-void AtomPath::append(AtomPath *path) {
+void AtomPath::append(AtomPath *path)
+{
     int i;
 
     curSubpath = length + path->curSubpath;
     grow(path->length);
-    for (i = 0; i < path->length; ++i) {
+    for (i = 0; i < path->length; ++i)
+    {
         pts[length] = path->pts[i];
         flags[length] = path->flags[i];
         ++length;
     }
 }
 
-int AtomPath::moveTo(double x, double y) {
-    if (onePointSubpath()) {
+int AtomPath::moveTo(double x, double y)
+{
+    if (onePointSubpath())
+    {
         return splashErrBogusPath;
     }
     grow(1);
@@ -513,11 +601,13 @@ int AtomPath::moveTo(double x, double y) {
     return splashOk;
 }
 
-int AtomPath::lineTo(double x, double y) {
-    if (noCurrentPoint()) {
+int AtomPath::lineTo(double x, double y)
+{
+    if (noCurrentPoint())
+    {
         return splashErrNoCurPt;
     }
-    flags[length-1] &= ~splashPathLast;
+    flags[length - 1] &= ~splashPathLast;
     grow(1);
     pts[length].x = x;
     pts[length].y = y;
@@ -528,11 +618,13 @@ int AtomPath::lineTo(double x, double y) {
 
 int AtomPath::curveTo(double x1, double y1,
                       double x2, double y2,
-                      double x3, double y3) {
-    if (noCurrentPoint()) {
+                      double x3, double y3)
+{
+    if (noCurrentPoint())
+    {
         return splashErrNoCurPt;
     }
-    flags[length-1] &= ~splashPathLast;
+    flags[length - 1] &= ~splashPathLast;
     grow(3);
     pts[length].x = x1;
     pts[length].y = y1;
@@ -549,14 +641,17 @@ int AtomPath::curveTo(double x1, double y1,
     return splashOk;
 }
 
-int AtomPath::close(GBool force) {
-    if (noCurrentPoint()) {
+int AtomPath::close(bool force)
+{
+    if (noCurrentPoint())
+    {
         return splashErrNoCurPt;
     }
     if (force ||
         curSubpath == length - 1 ||
         pts[length - 1].x != pts[curSubpath].x ||
-        pts[length - 1].y != pts[curSubpath].y) {
+        pts[length - 1].y != pts[curSubpath].y)
+    {
         lineTo(pts[curSubpath].x, pts[curSubpath].y);
     }
     flags[curSubpath] |= splashPathClosed;
@@ -565,10 +660,11 @@ int AtomPath::close(GBool force) {
     return splashOk;
 }
 
-void AtomPath::offset(double dx, double dy) {
-    for (int i = 0; i < length; ++i) {
+void AtomPath::offset(double dx, double dy)
+{
+    for (int i = 0; i < length; ++i)
+    {
         pts[i].x += dx;
         pts[i].y += dy;
     }
 }
-

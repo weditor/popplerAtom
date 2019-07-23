@@ -17,8 +17,9 @@ struct AtomXPathPoint {
 
 struct AtomXPathAdjust {
     int firstPt, lastPt;		// range of points
-    GBool vert;			// vertical or horizontal hint
-    double x0a, x0b,		// hint boundaries
+    bool  vert;			// vertical or horizontal hint
+    // hint boundaries
+    double x0a, x0b,		
             xma, xmb,
             x1a, x1b;
     double x0, x1, xm;	// adjusted coordinates
@@ -31,7 +32,7 @@ struct SplashXPathSeg {
     double x1, y1;		// second endpoint
     double dxdy;		// slope: delta-x / delta-y
     double dydx;		// slope: delta-y / delta-x
-    Guint flags;
+    unsigned int flags;
 };
 #define splashXPathHoriz   0x01 // segment is vertical (y0 == y1)
 //   (dxdy is undef)
@@ -133,14 +134,14 @@ public:
     // Close the last subpath, adding a line segment if necessary.  If
     // <force> is true, this adds a line segment even if the current
     // point is equal to the first point in the subpath.
-    int close(GBool force = gFalse);
+    int close(bool  force = false);
 
     // Add (<dx>, <dy>) to every point on this path.
     void offset(double dx, double dy);
 
     // Get the points on the path.
     int getLength() { return length; }
-    void getPoint(int i, double *x, double *y, Guchar *f)
+    void getPoint(int i, double *x, double *y, unsigned char *f)
     { *x = pts[i].x; *y = pts[i].y; *f = flags[i]; }
 
     // Reserve space for at least n points
@@ -150,12 +151,12 @@ public:
 
     AtomPath(AtomPath *path);
     void grow(int nPts);
-    GBool noCurrentPoint() { return curSubpath == length; }
-    GBool onePointSubpath() { return curSubpath == length - 1; }
-    GBool openSubpath() { return curSubpath < length - 1; }
+    bool  noCurrentPoint() { return curSubpath == length; }
+    bool  onePointSubpath() { return curSubpath == length - 1; }
+    bool  openSubpath() { return curSubpath < length - 1; }
 
     AtomPathPoint *pts;		// array of points
-    Guchar *flags;		// array of flags
+    unsigned char *flags;		// array of flags
     int length, size;		// length/size of the pts and flags arrays
     int curSubpath;		// index of first point in last subpath
 
@@ -172,8 +173,8 @@ public:
     // space, via <matrix>.  If <closeSubpaths> is true, closes all open
     // subpaths.
     AtomXPath(AtomPath *path, double *matrix,
-              double flatness, GBool closeSubpaths,
-              GBool adjustLines = gFalse, int linePosI = 0);
+              double flatness, bool  closeSubpaths,
+              bool  adjustLines = false, int linePosI = 0);
 
     // Copy an expanded path.
     AtomXPath *copy() { return new AtomXPath(this); }
